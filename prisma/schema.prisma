@@ -1,0 +1,2299 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+model Cidade {
+  id       Int      @id(map: "PK_Cidade") @default(autoincrement())
+  cidade   String?  @db.VarChar(50)
+  flaAtivo Boolean?
+
+  @@index([flaAtivo], map: "NonClusteredIndex-20231019-084447")
+  @@index([cidade], map: "NonClusteredIndex-20231019-084500")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model contatos_ {
+  Nome                     String?   @db.NVarChar(255)
+  Subelementos             String?   @db.NVarChar(255)
+  N__Comercial             String?   @map("N# Comercial") @db.NVarChar(255)
+  Pessoas                  String?   @db.NVarChar(255)
+  COD_CLIENTE              String?   @map("COD CLIENTE") @db.NVarChar(255)
+  CNPJ                     String?   @db.NVarChar(255)
+  Cidade                   String?   @db.NVarChar(255)
+  Estado                   String?   @db.NVarChar(255)
+  Segmento                 String?   @db.NVarChar(255)
+  Contato                  String?   @db.NVarChar(255)
+  ORIGEM                   String?   @db.NVarChar(255)
+  Representante            String?   @db.NVarChar(255)
+  Status                   String?   @db.NVarChar(255)
+  Pipeline_de_Ofertas      String?   @map("Pipeline de Ofertas") @db.NVarChar(255)
+  Telefone                 Float?
+  E_mail                   String?   @map("E-mail") @db.NVarChar(255)
+  Proxima_Atividade        DateTime? @map("Proxima Atividade") @db.DateTime
+  AMOSTRAS                 String?   @db.NVarChar(255)
+  Item_ID__auto_generated_ Float?    @map("Item ID (auto generated)")
+
+  @@map("contatos$")
+  @@ignore
+}
+
+model CRM_Agenda {
+  id             Int       @id(map: "PK_CRM_Agenda") @default(autoincrement())
+  idAgendaTitulo Int?
+  Descricao      String?   @db.VarChar(4000)
+  DataInicio     DateTime? @db.DateTime
+  DataFim        DateTime? @db.DateTime
+  DataAlteracao  DateTime? @db.DateTime
+  idAgendaStatus Int?
+  idUsuario      Int?
+  idContato      Int?
+}
+
+model CRM_AgendaStatus {
+  id          Int       @id(map: "PK_CRM_StatusAgenda") @default(autoincrement())
+  Status      String?   @db.VarChar(50)
+  dtaCadastro DateTime? @db.DateTime
+  idUsuario   Int?
+  corHTML     String?   @db.VarChar(50)
+  corFonte    String?   @db.VarChar(50)
+}
+
+model CRM_AgendaTitulo {
+  idAgendaTitulo Int       @id(map: "PK_CRM_AgendaTitulo") @default(autoincrement())
+  Titulo         String?   @db.VarChar(50)
+  dtaCadastro    DateTime? @db.DateTime
+  idUsuario      Int?
+  flaAtivo       Boolean?
+}
+
+model CRM_AtividadeConsolidada {
+  id        Int      @id(map: "PK_CRM_AtividadeConsolidada") @default(autoincrement())
+  idUsuario Int?
+  Ano       Int?
+  Mes       Int?
+  Atividade String?  @db.VarChar(50)
+  Valor     Decimal? @db.Decimal(18, 2)
+}
+
+model CRM_AtividadeRelatorio {
+  id                    Int       @id(map: "PK_CRM_AtividadeRelatorio") @default(autoincrement())
+  idContato             Int?
+  idRepresentante       Int?
+  dataCadastro          DateTime? @db.DateTime
+  idAtividadeTipo       Int?
+  idStatusAtividadeTipo Int?
+  Valor                 Decimal?  @db.Decimal(18, 2)
+  Observacao            String?   @db.VarChar(4000)
+  dataProximoContato    DateTime? @db.DateTime
+}
+
+model CRM_AtividadeStatus {
+  id              Int       @id(map: "PK_CRM_AtividadeStatus") @default(autoincrement())
+  idAtividadeTipo Int?
+  AtividadeStatus String?   @db.VarChar(50)
+  dtaCadastro     DateTime? @db.DateTime
+  idUsuario       Int?
+}
+
+model CRM_AtividadeTipo {
+  id            Int       @id(map: "PK_CRM_AtividadeTipo") @default(autoincrement())
+  AtividadeTipo String?   @db.VarChar(50)
+  dtaCadastro   DateTime? @db.DateTime
+  idUsuario     Int?
+}
+
+model CRM_Contato {
+  idContato           Int       @id(map: "PK_CRM_Contato") @default(autoincrement())
+  nomContato          String?   @db.VarChar(1000)
+  subElemento         String?   @db.VarChar(1000)
+  idUsuarioAt         BigInt?
+  idBotConversa       Int?
+  IdOrigem            Int?
+  nomComercial        String?   @db.VarChar(1000)
+  CodCliente          String?   @db.VarChar(1000)
+  CNPJ                String?   @db.VarChar(1000)
+  CPF                 String?   @db.VarChar(50)
+  ContatoEmpresa      String?   @db.VarChar(1000)
+  Segmento            String?   @db.VarChar(1000)
+  IdStatus            Int?
+  idRepresentante     Int?
+  Pipeline            String?   @db.VarChar(1000)
+  Telefone            String?   @db.VarChar(1000)
+  TelefoneWS          String?   @db.VarChar(50)
+  email               String?   @db.VarChar(1000)
+  ProximaAtividade    DateTime? @db.Date
+  ItemId              BigInt?
+  dtaCadastro         DateTime? @db.DateTime
+  TipoPessoa          String?   @db.VarChar(50)
+  dtaAbertura         DateTime? @db.Date
+  Situacao            String?   @db.VarChar(50)
+  Porte               String?   @db.VarChar(100)
+  NaturezaJuridica    String?   @db.VarChar(100)
+  AtividadePrincipal  String?   @db.VarChar(500)
+  Tipo                String?   @db.VarChar(50)
+  flaAtivo            Boolean?
+  dtaAlteracao        DateTime? @db.DateTime
+  fContato            String?   @db.VarChar(100)
+  fTelefone           String?   @db.VarChar(100)
+  fEmail              String?   @db.VarChar(100)
+  SegmentoAtuacao     String?   @db.VarChar(100)
+  CategoriaFinanceira String?   @db.VarChar(100)
+
+  @@index([dtaAlteracao, nomContato], map: "IX_CRM_Contato_dtaAlteracao_nomContato_cover")
+  @@index([IdOrigem, dtaAlteracao(sort: Desc)], map: "IX_CRM_Contato_idOrigem_dtaAlteracao")
+  @@index([idRepresentante, dtaAlteracao(sort: Desc)], map: "IX_CRM_Contato_idRepresentante_dtaAlteracao")
+  @@index([IdStatus, dtaAlteracao(sort: Desc)], map: "IX_CRM_Contato_idStatus_dtaAlteracao")
+  @@index([SegmentoAtuacao, dtaAlteracao(sort: Desc)], map: "IX_CRM_Contato_SegmentoAtuacao_dtaAlteracao")
+  @@index([IdStatus], map: "NonClusteredIndex-20240130-135610")
+  @@index([IdOrigem], map: "NonClusteredIndex-20240130-135626")
+  @@index([idRepresentante], map: "NonClusteredIndex-20240130-135638")
+}
+
+model CRM_Contato_Endereco {
+  IdContatoEndereco Int       @id(map: "PK_CRM_Contato_Endereco") @default(autoincrement())
+  idContato         Int?
+  flaPrincipal      Boolean?
+  CEP               String?   @db.VarChar(50)
+  UF                String?   @db.VarChar(500)
+  Cidade            String?   @db.VarChar(500)
+  Bairro            String?   @db.VarChar(500)
+  Endereco          String?   @db.VarChar(500)
+  Numero            String?   @db.VarChar(500)
+  Complemento       String?   @db.VarChar(500)
+  Observacao01      String?   @db.VarChar(1000)
+  Observacao02      String?   @db.VarChar(1000)
+  flaAtivo          Boolean?
+  dtaCadastro       DateTime? @db.DateTime
+  dtaAlteracao      DateTime? @db.DateTime
+  idUsuario         Int?
+
+  @@index([flaAtivo], map: "flaAtivo")
+  @@index([flaPrincipal], map: "flaPrincipal")
+  @@index([idContato], map: "NonClusteredIndex-20240912-200555")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Contato_Endereco_Lixeira {
+  IdContatoEndereco Int
+  idContato         Int?
+  flaPrincipal      Boolean?
+  CEP               String?   @db.VarChar(50)
+  UF                String?   @db.VarChar(500)
+  Cidade            String?   @db.VarChar(500)
+  Bairro            String?   @db.VarChar(500)
+  Endereco          String?   @db.VarChar(500)
+  Numero            String?   @db.VarChar(500)
+  Complemento       String?   @db.VarChar(500)
+  Observacao01      String?   @db.VarChar(1000)
+  Observacao02      String?   @db.VarChar(1000)
+  flaAtivo          Boolean?
+  dtaCadastro       DateTime? @db.DateTime
+  dtaAlteracao      DateTime? @db.DateTime
+  idUsuario         Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Contato_Lixeira {
+  idContato           Int
+  nomContato          String?   @db.VarChar(1000)
+  subElemento         String?   @db.VarChar(1000)
+  idUsuarioAt         BigInt?
+  idBotConversa       Int?
+  IdOrigem            Int?
+  nomComercial        String?   @db.VarChar(1000)
+  CodCliente          String?   @db.VarChar(1000)
+  CNPJ                String?   @db.VarChar(1000)
+  CPF                 String?   @db.VarChar(50)
+  ContatoEmpresa      String?   @db.VarChar(1000)
+  Segmento            String?   @db.VarChar(1000)
+  IdStatus            Int?
+  idRepresentante     Int?
+  Pipeline            String?   @db.VarChar(1000)
+  Telefone            String?   @db.VarChar(1000)
+  TelefoneWS          String?   @db.VarChar(50)
+  email               String?   @db.VarChar(1000)
+  ProximaAtividade    DateTime? @db.Date
+  ItemId              BigInt?
+  dtaCadastro         DateTime? @db.DateTime
+  TipoPessoa          String?   @db.VarChar(50)
+  dtaAbertura         DateTime? @db.Date
+  Situacao            String?   @db.VarChar(50)
+  Porte               String?   @db.VarChar(100)
+  NaturezaJuridica    String?   @db.VarChar(100)
+  AtividadePrincipal  String?   @db.VarChar(500)
+  Tipo                String?   @db.VarChar(50)
+  flaAtivo            Boolean?
+  dtaAlteracao        DateTime? @db.DateTime
+  fContato            String?   @db.VarChar(100)
+  fTelefone           String?   @db.VarChar(100)
+  fEmail              String?   @db.VarChar(100)
+  SegmentoAtuacao     String?   @db.VarChar(100)
+  CategoriaFinanceira String?   @db.VarChar(100)
+
+  @@ignore
+}
+
+model CRM_ContatoArquivo {
+  id             Int       @id(map: "PK_CRM_ContatoArquivo") @default(autoincrement())
+  idContato      Int?
+  ArquivoNome    String?   @db.VarChar(500)
+  ArquivoTipo    String?   @db.VarChar(100)
+  CaminhoArquivo String?   @db.VarChar(500)
+  dtaCriacao     DateTime? @db.DateTime
+  idUsuario      Int?
+}
+
+model CRM_ContatoEtiqueta {
+  id          Int       @id(map: "PK_CRM_ContatoEtiqueta") @default(autoincrement())
+  nomEtiqueta String?   @db.VarChar(50)
+  CorHTML     String?   @db.VarChar(50)
+  dtaCadastro DateTime? @db.DateTime
+  idUsuario   Int?
+}
+
+model CRM_ContatoRepresentanteAdicional {
+  id              Int  @id(map: "PK_CRM_ContatoRepresentanteAdicional") @default(autoincrement())
+  idContato       Int?
+  idRepresentante Int?
+
+  @@index([idContato], map: "IX_CRM_ContatoRepresentanteAdicional_idContato")
+  @@index([idContato], map: "NonClusteredIndex-20240529-102050")
+  @@index([idRepresentante], map: "NonClusteredIndex-20240529-102112")
+}
+
+model CRM_ContatoUpdate {
+  idContatoUpdate   Int       @id(map: "PK_CRM_ContatoUpdate") @default(autoincrement())
+  idContato         Int?
+  ItemId            String?   @db.VarChar(4000)
+  ItemName          String?   @db.VarChar(4000)
+  ContentType       String?   @db.VarChar(4000)
+  User              String?   @db.VarChar(4000)
+  CreatedAt         DateTime? @db.DateTime
+  UpdateContent     String?   @db.VarChar(Max)
+  LikesCount        String?   @db.VarChar(4000)
+  AssetIds          String?   @db.VarChar(4000)
+  PostId            String?   @db.VarChar(4000)
+  idStatusAtividade Int?
+  dtaProximoContato DateTime? @db.DateTime
+  idUsuario         Int?
+  idAtividadeTipo   Int?
+  idAtividadeStatus Int?
+  Valor             Decimal?  @db.Decimal(18, 2)
+
+  @@index([idContato, dtaProximoContato], map: "IX_CRM_ContatoUpdate_idContato_dtaProx_INC_UpdateContent")
+  @@index([idContato], map: "NonClusteredIndex-20240911-203624")
+  @@index([dtaProximoContato], map: "NonClusteredIndex-20240912-200020")
+  @@index([idUsuario], map: "NonClusteredIndex-20241031-152337")
+  @@index([idStatusAtividade], map: "NonClusteredIndex-20241031-152358")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_ContatoUpdate_Lixeira {
+  idContatoUpdate   Int
+  idContato         Int?
+  ItemId            String?   @db.VarChar(4000)
+  ItemName          String?   @db.VarChar(4000)
+  ContentType       String?   @db.VarChar(4000)
+  User              String?   @db.VarChar(4000)
+  CreatedAt         DateTime? @db.DateTime
+  UpdateContent     String?   @db.VarChar(Max)
+  LikesCount        String?   @db.VarChar(4000)
+  AssetIds          String?   @db.VarChar(4000)
+  PostId            String?   @db.VarChar(4000)
+  idStatusAtividade Int?
+  dtaProximoContato DateTime? @db.DateTime
+  idUsuario         Int?
+
+  @@ignore
+}
+
+model CRM_ContatoUpdateArquivo {
+  id              Int       @id(map: "PK_CRM_ContatoUpdateArquivo")
+  idContatoUpdate Int?
+  nomArquivo      String?   @db.VarChar(50)
+  urlArquivo      String?   @db.VarChar(50)
+  dtaCadastro     DateTime? @db.DateTime
+  idUsuario       Int?
+}
+
+model CRM_ContatoUpdateEtiqueta {
+  id                Int       @id(map: "PK_CRM_ContatoUpdateEtiqueta") @default(autoincrement())
+  idContatoEtiqueta Int?
+  idContatoUpdate   Int?
+  dtaCadastro       DateTime? @db.DateTime
+  idUsuario         Int?
+}
+
+model CRM_ContatoUpdateStatus {
+  idStatusAtividade Int     @id(map: "PK_CRM_ContatoUpdateStatus") @default(autoincrement())
+  StatusAtividade   String? @db.VarChar(50)
+  corHTML           String? @db.VarChar(50)
+  Ordem             Int?
+}
+
+model CRM_Equipe {
+  idEquipe Int     @id(map: "PK_CRM_Equipe") @default(autoincrement())
+  Equipe   String? @db.VarChar(50)
+}
+
+model CRM_Estoque {
+  id           Int      @id(map: "PK_CRM_Estoque") @default(autoincrement())
+  Familia      String?  @db.VarChar(50)
+  Codigo       String?  @db.VarChar(50)
+  Descricao    String?  @db.VarChar(500)
+  Unidade      String?  @db.VarChar(50)
+  EntradaSaida String?  @db.VarChar(50)
+  Saldo        Decimal? @db.Decimal(18, 4)
+  Situacao     String?  @db.VarChar(50)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_EstoqueStatus {
+  idEstoqueStatus  Int?
+  Status           String?  @db.VarChar(50)
+  CorHTML          String?  @db.VarChar(50)
+  flaExp           Boolean?
+  flaExpConcluido  Boolean?
+  flaExpSeparacao  Boolean?
+  flaPP_EmProducao Boolean?
+  flaPP_Concluido  Boolean?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_EstoqueTotvs {
+  Codigo         String?  @db.VarChar(50)
+  TP             String?  @db.VarChar(50)
+  Grupo          String?  @db.VarChar(50)
+  Descricao      String?  @db.VarChar(500)
+  UnidadeMedida  String?  @db.VarChar(50)
+  Arm            String?  @db.VarChar(50)
+  Quantidade     Decimal? @db.Decimal(18, 2)
+  Custo          Decimal? @db.Decimal(18, 2)
+  Lote           String?  @db.VarChar(50)
+  DtaFabricacao  String?  @db.VarChar(50)
+  DtaValidade    String?  @db.VarChar(50)
+  QtdTerceiros   Decimal? @db.Decimal(18, 2)
+  QtdEmTerceiros Decimal? @db.Decimal(18, 2)
+  QtdReservada   Decimal? @db.Decimal(18, 2)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_EstoqueTotvsSM3m030 {
+  Produto                String? @db.VarChar(50)
+  Descricao              String? @db.VarChar(500)
+  Armazem                String? @db.VarChar(50)
+  Quant_Atual            String? @map("Quant.Atual") @db.VarChar(50)
+  Sdo_Fim_Mes            String? @map("Sdo Fim Mes") @db.VarChar(50)
+  Quant_Prev_SC          String? @map("Quant.Prev.SC") @db.VarChar(50)
+  Quant_Prev_PC          String? @map("Quant.Prev.PC") @db.VarChar(50)
+  Qtd__OP_Ent            String? @map("Qtd. OP Ent") @db.VarChar(50)
+  Qtd__OP_Saida          String? @map("Qtd. OP Saida") @db.VarChar(50)
+  Quant_Emp_PV           String? @map("Quant.Emp.PV") @db.VarChar(50)
+  Saldo_Pod_3            String? @map("Saldo Pod.3") @db.VarChar(50)
+  Qt_Ter_Ns_Pd           String? @map("Qt.Ter.Ns.Pd") @db.VarChar(50)
+  Qt_Ns_Pd_Ter           String? @map("Qt.Ns.Pd.Ter") @db.VarChar(50)
+  Lote                   String? @db.VarChar(50)
+  Dt__Fabrica__o         String? @map("Dt. Fabricação") @db.VarChar(50)
+  Validade               String? @db.VarChar(50)
+  Qtd__O_S_              String? @map("Qtd. O.S.") @db.VarChar(50)
+  Saldo_ultimo_envio_PDV String? @map("Saldo ultimo envio PDV") @db.VarChar(50)
+
+  @@ignore
+}
+
+model CRM_ExpedicaoArquivo {
+  id             Int       @id(map: "PK_CRM_ExpedicaoArquivo") @default(autoincrement())
+  idProposta     Int?
+  ArquivoNome    String?   @db.VarChar(500)
+  ArquivoTipo    String?   @db.VarChar(100)
+  dtaCriacao     DateTime? @db.DateTime
+  idUsuario      Int?
+  CaminhoArquivo String?   @db.VarChar(500)
+}
+
+model CRM_ExpedicaoRastreio {
+  id             Int       @id(map: "PK_CRM_ExpedicaoRastreio") @default(autoincrement())
+  idProposta     Int?
+  RastreioCodigo String?   @db.VarChar(50)
+  RastreioUrl    String?   @db.VarChar(500)
+  RastreioMsg    String?   @db.VarChar(1000)
+  DtaCadastro    DateTime? @db.DateTime
+  WhatsApp       String?   @db.VarChar(50)
+  idBotConversa  String?   @db.VarChar(50)
+  PrimeiroNome   String?   @db.VarChar(50)
+  UltimoNome     String?   @db.VarChar(50)
+  flaMsgEnviada  Boolean?
+}
+
+model CRM_ExpedicaoUpdate {
+  idExpedicaoUpdate Int       @id(map: "PK_CRM_ExpedicaoUpdate") @default(autoincrement())
+  idProposta        Int?
+  ItemId            String?   @db.VarChar(4000)
+  ItemName          String?   @db.VarChar(4000)
+  ContentType       String?   @db.VarChar(4000)
+  User              String?   @db.VarChar(4000)
+  CreatedAt         DateTime? @db.DateTime
+  UpdateContent     String?   @db.VarChar(Max)
+  LikesCount        String?   @db.VarChar(4000)
+  AssetIds          String?   @db.VarChar(4000)
+  PostId            String?   @db.VarChar(4000)
+  idStatusAtividade Int?
+  dtaProximoContato DateTime? @db.DateTime
+  idUsuario         Int?
+}
+
+model CRM_Filtro {
+  id              Int     @id(map: "PK_CRM_Filtro") @default(autoincrement())
+  idFiltro        Int?
+  Entidade        String? @db.VarChar(50)
+  Atributo        String? @db.VarChar(50)
+  AtributoApelido String? @db.VarChar(50)
+  TipoAtributo    String? @db.VarChar(50)
+  ScriptJava      String? @db.VarChar(4000)
+}
+
+model CRM_Grupo {
+  idGrupo Int     @id(map: "PK_tbGrupoUsuario")
+  Grupo   String? @db.VarChar(50)
+  Menu01  Int?
+  Menu02  Int?
+  Menu03  Int?
+  Menu04  Int?
+  Menu05  Int?
+  Menu06  Int?
+  Menu07  Int?
+  Menu08  Int?
+  Painel  Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Importacao_TabelaPreco {
+  CodProduto String? @db.VarChar(50)
+
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 7 Decimal? @map("7") @db.Decimal(18, 6)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 12 Decimal? @map("12") @db.Decimal(18, 6)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 18 Decimal? @map("18") @db.Decimal(18, 6)
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_ImportBotConversa {
+  id         Int?
+  full_name  String? @db.VarChar(500)
+  first_name String? @db.VarChar(500)
+  last_name  String? @db.VarChar(500)
+  phone      String? @db.VarChar(500)
+  ddd        String? @db.VarChar(500)
+  created_at String? @db.VarChar(500)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_ImportTemp {
+
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 1 String? @map("1") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 2 String? @map("2") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 3 String? @map("3") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 4 String? @map("4") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 5 String? @map("5") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 6 String? @map("6") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 7 String? @map("7") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 8 String? @map("8") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 9 String? @map("9") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 10 String? @map("10") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 11 String? @map("11") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 12 String? @map("12") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 13 String? @map("13") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 14 String? @map("14") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 15 String? @map("15") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 16 String? @map("16") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 17 String? @map("17") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 18 String? @map("18") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 19 String? @map("19") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 20 String? @map("20") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 21 String? @map("21") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 22 String? @map("22") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 23 String? @map("23") @db.VarChar(500)
+  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
+  // 24 String? @map("24") @db.VarChar(500)
+  @@ignore
+}
+
+model CRM_Log {
+  id         Int       @id(map: "PK_CRM_Log") @default(autoincrement())
+  idUsuario  Int?
+  Data       DateTime? @db.DateTime
+  Atividade  String?   @db.VarChar(50)
+  Ocorrencia String?   @db.VarChar(4000)
+  IP         String?   @db.VarChar(50)
+}
+
+model CRM_Origem {
+  idOrigem Int     @id(map: "PK_CRM_Origem") @default(autoincrement())
+  Origem   String? @db.VarChar(1000)
+  corHTML  String? @db.VarChar(50)
+
+  @@index([idOrigem], map: "IX_CRM_Origem_idOrigem_cover")
+}
+
+model CRM_Parametro {
+  id          Int       @id(map: "PK_CRM_Parametro") @default(autoincrement())
+  Item        String?   @db.VarChar(50)
+  valor       String?   @db.VarChar(50)
+  dtaCadastro DateTime? @db.DateTime
+  flaAtivo    Boolean?
+}
+
+model CRM_PedidosAbertos_ItemExtra {
+  id                 Int       @id(map: "PK_CRM_PedidosAbertos_ItemExtra") @default(autoincrement())
+  idPropostaDetalhe  Int?
+  PropostaNo         String?   @db.VarChar(50)
+  dtaEnvio           DateTime? @db.DateTime
+  nomComercial       String?   @db.VarChar(1000)
+  NCM                String?   @db.VarChar(50)
+  TTKG               String?   @db.VarChar(50)
+  TTCJ               String?   @db.VarChar(50)
+  CodMaterial        String?   @db.VarChar(50)
+  nomMaterial        String?   @db.VarChar(500)
+  codMaterialMatriz  String?   @db.VarChar(50)
+  Unidade            String?   @db.VarChar(100)
+  PesoEmbalagem      String?   @db.VarChar(50)
+  idEstoqueStatus    Int?
+  idFinanceiroStatus Int?
+  idProducaoStatus   Int?
+  idExpedicaoStatus  Int?
+  idPrioridadeStatus Int?
+  idSetorStatus      Int?
+  idSeparacaoStatus  Int?
+  idAcertoCorStatus  Int?
+  idEnvaseStatus     Int?
+  Nome               String?   @db.VarChar(500)
+  dtaInicio          DateTime? @db.DateTime
+  dtaEntrega         DateTime? @db.DateTime
+  dtaEnvioReal       DateTime? @db.DateTime
+  Lote               String?   @db.VarChar(50)
+  codTotvs           String?   @db.VarChar(50)
+  dtaFinalEfetiva    DateTime? @db.DateTime
+  RendimentoReal     Int?
+}
+
+model CRM_ProcessoProdutivo {
+  idProcessoProdutivo      Int       @id(map: "PK_CRM_ProcessoProdutivo") @default(autoincrement())
+  idPropostaDetalhe        Int?
+  idStatusPrioridade       Int?
+  dtaInicio                DateTime? @db.DateTime
+  idProcessoProdutivoSetor Int?
+  dtaPrazoEntrega          DateTime? @db.DateTime
+  Fator                    Float?
+  TTKG                     Float?
+  TTCJ                     Float?
+  Lote                     String?   @db.VarChar(50)
+  dtaInclusao              DateTime? @db.DateTime
+  dtaFinalEfetiva          DateTime? @db.DateTime
+  RendimentoReal           Float?
+
+  @@index([idPropostaDetalhe], map: "NonClusteredIndex-20241017-100318")
+}
+
+model CRM_ProcessoProdutivoStatus {
+  idStatus Int     @id(map: "PK_CRM_ProcessoProdutivoStatus") @default(autoincrement())
+  Status   String? @db.VarChar(50)
+  Grupo    String? @db.VarChar(50)
+  corHTML  String? @db.VarChar(50)
+}
+
+model CRM_Produto_Composicao {
+  idComposicao           Int     @id(map: "PK_CRM_ProdutoComposicao") @default(autoincrement())
+  nomComposicao          String? @db.VarChar(1000)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  ValorEmbalagem         Float?
+  idComposicaoImportacao Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Composicao_Teste {
+  idComposicao           Int     @default(autoincrement())
+  nomComposicao          String? @db.VarChar(1000)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  ValorEmbalagem         Float?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+model CRM_Produto_ComposicaoMaterial {
+  id           Int  @id(map: "PK_CRM_Produto_ComposicaoMaterial") @default(autoincrement())
+  idComposicao Int?
+  idMaterial   Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_ComposicaoMaterial_Teste {
+  id           Int  @default(autoincrement())
+  idComposicao Int?
+  idMaterial   Int?
+
+  @@ignore
+}
+
+model CRM_Produto_Material {
+  idMaterial             Int       @id(map: "PK_CRM_Produto_Material") @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250301121116 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250301122502 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250302043159 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250302043301 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250302043440 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250302051226 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250309034812 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250310061738 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250316195422 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250317193510 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250417140741 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250419052927 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250420144422 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250420145019 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250420145553 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250421034907 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250421183210 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250505142135 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250505191228 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250505193050 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250506024520 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250506094820 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250525084130 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250527055307 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250601182513 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250608190221 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20250905192254 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20251012182147 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_Teste {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 2)
+  PrecoKg12              Decimal?  @db.Decimal(18, 2)
+  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+model CRM_Produto_MaterialGrupo {
+  idMaterialGrupo Int     @id(map: "PK_CRM_Produto_GrupoMaterial") @default(autoincrement())
+  nomGrupo        String? @db.VarChar(100)
+}
+
+model CRM_Proposta {
+  idProposta          Int       @id(map: "PK_CRM_PropostaIdentificacao") @default(autoincrement())
+  PropostaNo          String?   @db.VarChar(50)
+  idContato           Int?
+  idDifal             Int?
+  CalculaDifal        Int?
+  Desconto            Float?
+  dtaCriacao          DateTime? @db.DateTime
+  idUsuario           Int?
+  TotalKg             Decimal?  @db.Decimal(18, 2)
+  TotalValor          Decimal?  @db.Decimal(18, 2)
+  PropostaDoc         Decimal?  @db.Decimal(18, 6)
+  Observacao          String?   @db.VarChar(500)
+  Valor               Decimal?  @db.Decimal(18, 2)
+  idStatus            Int?
+  ObsChecagem         String?   @db.VarChar(4000)
+  idFrete             Int?
+  idCondicaoPagamento Int?
+  dtaEnvio            DateTime? @db.DateTime
+  dtaValidade         DateTime? @db.DateTime
+  id                  String?   @db.UniqueIdentifier
+  FundoPobreza        Int?
+  idOutros            Int?
+  ValorOutros         Decimal?  @db.Decimal(18, 2)
+  Possibilidade       Decimal?  @db.Decimal(18, 2)
+  GanhoEstimado       Decimal?  @db.Decimal(18, 2)
+  DataPossivel        DateTime? @db.DateTime
+  Area                Int?
+  ValorM2             Decimal?  @db.Decimal(18, 2)
+
+  @@index([idContato], map: "IX_CRM_Proposta_idContato")
+  @@index([idContato], map: "NonClusteredIndex-20241217-113506")
+  @@index([idUsuario], map: "NonClusteredIndex-20241217-113519")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_bkp_8 {
+  idProposta          Int
+  PropostaNo          String?   @db.VarChar(50)
+  idContato           Int?
+  idDifal             Int?
+  CalculaDifal        Int?
+  Desconto            Float?
+  dtaCriacao          DateTime? @db.DateTime
+  idUsuario           Int?
+  TotalKg             Decimal?  @db.Decimal(18, 2)
+  TotalValor          Decimal?  @db.Decimal(18, 2)
+  PropostaDoc         Bytes?
+  Observacao          String?   @db.VarChar(500)
+  Valor               Decimal?  @db.Decimal(18, 2)
+  idStatus            Int?
+  ObsChecagem         String?   @db.VarChar(4000)
+  idFrete             Int?
+  idCondicaoPagamento Int?
+  dtaEnvio            DateTime? @db.DateTime
+  dtaValidade         DateTime? @db.DateTime
+  id                  String?   @db.UniqueIdentifier
+  FundoPobreza        Int?
+  idOutros            Int?
+  ValorOutros         Decimal?  @db.Decimal(18, 2)
+
+  @@ignore
+}
+
+model CRM_Proposta_CondicaoPagamento {
+  idCondicaoPagamento  Int       @id(map: "PK_CRM_Proposta_CondicaoPagamento") @default(autoincrement())
+  Titulo               String?   @db.VarChar(50)
+  desCondicaoPagamento String?   @db.VarChar(4000)
+  dtaAtualizacao       DateTime? @db.DateTime
+  flaAtivo             Boolean?
+}
+
+model CRM_Proposta_Detalhe {
+  idPropostaDetalhe   Int       @id(map: "PK_CRM_PropostaDetalhe") @default(autoincrement())
+  idEtapa             Int?
+  idComposicao        Int?
+  idProposta          Int?
+  idMaterial          Int?
+  Quantidade          Int?
+  Desconto            Float?
+  MaterialDescricao   String?   @db.VarChar(500)
+  OrdemMaterial       Int?
+  OrdemComposicao     Int?
+  OrdemGrupo          Int?
+  OrdemEtapa          Int?
+  PesoEmbalagemAlt    Float?
+  codMaterialAlt      String?   @db.VarChar(50)
+  idComposicaoDetalhe Int?
+  codTotvs            String?   @db.VarChar(50)
+  dtaEnvio            DateTime? @db.DateTime
+  dtaEnvioReal        DateTime? @db.DateTime
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_Detalhe_Lixeira {
+  idPropostaDetalhe   Int
+  idEtapa             Int?
+  idComposicao        Int?
+  idProposta          Int?
+  idMaterial          Int?
+  Quantidade          Int?
+  Desconto            Float?
+  MaterialDescricao   String? @db.VarChar(500)
+  OrdemMaterial       Int?
+  OrdemComposicao     Int?
+  OrdemGrupo          Int?
+  OrdemEtapa          Int?
+  PesoEmbalagemAlt    Float?
+  codMaterialAlt      String? @db.VarChar(50)
+  idComposicaoDetalhe Int?
+
+  @@ignore
+}
+
+model CRM_Proposta_Detalhe_Versao {
+  idPropostaDetahleVersao Int       @id(map: "PK_CRM_Proposta_Detalhe_Versao") @default(autoincrement())
+  idPropostaVersao        Int?
+  idPropostaDetalhe       Int
+  idEtapa                 Int?
+  idComposicao            Int?
+  idProposta              Int?
+  idMaterial              Int?
+  Quantidade              Int?
+  Desconto                Float?
+  MaterialDescricao       String?   @db.VarChar(500)
+  OrdemMaterial           Int?
+  OrdemComposicao         Int?
+  OrdemGrupo              Int?
+  OrdemEtapa              Int?
+  PesoEmbalagemAlt        Float?
+  codMaterialAlt          String?   @db.VarChar(50)
+  idComposicaoDetalhe     Int?
+  dtaVersao               DateTime? @db.DateTime
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheAcertoCorStatus {
+  id                Int       @default(autoincrement())
+  idAcertoCorStatus Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheEnvaseStatus {
+  id                Int       @default(autoincrement())
+  idEnvaseStatus    Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheEstoqueStatus {
+  id                     Int       @default(autoincrement())
+  idEstoqueStatus        Int?
+  idPropostaDetalhe      Int?
+  idUsuario              Int?
+  DataCadastro           DateTime? @db.DateTime
+  idPropostaDetalheExtra String?   @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheExpedicaoStatus {
+  id                Int       @default(autoincrement())
+  idExpedicaoStatus Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheFinanceiroStatus {
+  id                 Int       @default(autoincrement())
+  idFinanceiroStatus Int?
+  idPropostaDetalhe  Int?
+  idUsuario          Int?
+  DataCadastro       DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalhePrioridadeStatus {
+  id                 Int       @default(autoincrement())
+  idPrioridadeStatus Int?
+  idPropostaDetalhe  Int?
+  idUsuario          Int?
+  DataCadastro       DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheProducaoStatus {
+  id                Int       @default(autoincrement())
+  idProducaoStatus  Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheSeparacaoStatus {
+  id                Int       @default(autoincrement())
+  idSeparacaoStatus Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_DetalheSetorStatus {
+  id                Int       @default(autoincrement())
+  idSetorStatus     Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+
+  @@ignore
+}
+
+model CRM_Proposta_DetalheStatus {
+  id                Int       @id(map: "PK_CRM_PropostaDetalheStatus") @default(autoincrement())
+  idEstoqueStatus   Int?
+  idPropostaDetalhe Int?
+  idUsuario         Int?
+  DataCadastro      DateTime? @db.DateTime
+}
+
+model CRM_Proposta_Difal {
+  idDifal      Int     @id(map: "PK_CRM_Proposta_Difal") @default(autoincrement())
+  UF           String? @db.VarChar(2)
+  AliqEst      Float?
+  AliqInt      Float?
+  Optante      Float?
+  PessoaFisica Float?
+  SInscEst     Float?
+  Sim          Float?
+  Nao          Float?
+}
+
+model CRM_Proposta_Etapa {
+  idEtapa     Int       @id(map: "PK_CRM_Produto_Etapa") @default(autoincrement())
+  idProposta  Int?
+  Etapa       String?   @db.VarChar(100)
+  Descricao   String?   @db.VarChar(4000)
+  Ordem       Int?
+  dtaCadastro DateTime? @db.DateTime
+  idUsuario   Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_Etapa_Lixeira {
+  idEtapa     Int
+  idProposta  Int?
+  Etapa       String?   @db.VarChar(100)
+  Descricao   String?   @db.VarChar(4000)
+  Ordem       Int?
+  dtaCadastro DateTime? @db.DateTime
+  idUsuario   Int?
+
+  @@ignore
+}
+
+model CRM_Proposta_Frete {
+  idFrete        Int       @id(map: "PK_CRM_Proposta_Frete") @default(autoincrement())
+  Titulo         String?   @db.VarChar(50)
+  desFrete       String?   @db.VarChar(4000)
+  dtaAtualizacao DateTime? @db.DateTime
+  flaAtivo       Boolean?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_Lixeira {
+  idProposta          Int
+  PropostaNo          String?   @db.VarChar(50)
+  idContato           Int?
+  idDifal             Int?
+  CalculaDifal        Int?
+  Desconto            Float?
+  dtaCriacao          DateTime? @db.DateTime
+  idUsuario           Int?
+  TotalKg             Decimal?  @db.Decimal(18, 2)
+  TotalValor          Decimal?  @db.Decimal(18, 2)
+  PropostaDoc         Bytes?
+  Observacao          String?   @db.VarChar(500)
+  Valor               Decimal?  @db.Decimal(18, 2)
+  idStatus            Int?
+  ObsChecagem         String?   @db.VarChar(4000)
+  idFrete             Int?
+  idCondicaoPagamento Int?
+  dtaEnvio            DateTime? @db.DateTime
+  dtaValidade         DateTime? @db.DateTime
+  id                  String?   @db.UniqueIdentifier
+  FundoPobreza        Int?
+  idOutros            Int?
+  ValorOutros         Decimal?  @db.Decimal(18, 2)
+
+  @@ignore
+}
+
+model CRM_Proposta_Outros {
+  idOutros       Int       @id(map: "PK_CRM_Proposta_Outros") @default(autoincrement())
+  Outros         String?   @db.VarChar(50)
+  desOutros      String?   @db.VarChar(4000)
+  dtaAtualizacao DateTime? @db.DateTime
+  flaAtivo       Boolean?
+}
+
+model CRM_Proposta_Reprovacao {
+  idReprovacao  Int       @id(map: "PK_CRM_Proposta_Reprovacao") @default(autoincrement())
+  idProposta    Int?
+  dtaReprovacao DateTime? @db.DateTime
+  Observacao    String?   @db.VarChar(4000)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_Reprovacao_Lixeira {
+  idReprovacao  Int
+  idProposta    Int?
+  dtaReprovacao DateTime? @db.DateTime
+  Observacao    String?   @db.VarChar(4000)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Proposta_Status {
+  idStatus Int?
+  Status   String? @db.VarChar(50)
+  CorHTML  String? @db.VarChar(50)
+
+  @@ignore
+}
+
+model CRM_Proposta_Versao {
+  idPropostaVersao    Int       @id(map: "PK_CRM_Proposta_Versao") @default(autoincrement())
+  idProposta          Int
+  PropostaNo          String?   @db.VarChar(50)
+  idContato           Int?
+  idDifal             Int?
+  CalculaDifal        Int?
+  Desconto            Float?
+  dtaCriacao          DateTime? @db.DateTime
+  idUsuario           Int?
+  TotalKg             Decimal?  @db.Decimal(18, 2)
+  TotalValor          Decimal?  @db.Decimal(18, 2)
+  PropostaDoc         Bytes?
+  Observacao          String?   @db.VarChar(500)
+  Valor               Decimal?  @db.Decimal(18, 2)
+  idStatus            Int?
+  ObsChecagem         String?   @db.VarChar(4000)
+  idFrete             Int?
+  idCondicaoPagamento Int?
+  dtaEnvio            DateTime? @db.DateTime
+  dtaValidade         DateTime? @db.DateTime
+  id                  String?   @db.UniqueIdentifier
+  FundoPobreza        Int?
+  DtaVersao           DateTime? @db.DateTime
+}
+
+model CRM_Representante {
+  idRepresentante Int     @id(map: "PK_CRM_Representante") @default(autoincrement())
+  Representante   String? @db.VarChar(1000)
+  corHTML         String? @db.VarChar(50)
+}
+
+model CRM_SegmentoAtuacao {
+  id              Int     @id(map: "PK_CRM_SegmentoAtuacao") @default(autoincrement())
+  Cod             String? @db.VarChar(50)
+  SegmentoAtuacao String? @db.VarChar(500)
+
+  @@index([id], map: "IX_CRM_SegmentoAtuacao_id_cover")
+}
+
+model CRM_Status {
+  idStatus Int     @id(map: "PK_CRM_Status") @default(autoincrement())
+  Status   String? @db.VarChar(100)
+  Cor      String? @db.VarChar(50)
+  CorHTML  String? @db.VarChar(50)
+
+  @@index([idStatus], map: "IX_CRM_Status_idStatus_cover")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_StatusGeral {
+  id            Int      @default(autoincrement())
+  Status        String?  @db.VarChar(50)
+  CorHTML       String?  @db.VarChar(50)
+  flaFinanceiro Boolean?
+  flaEstoque    Boolean?
+  flaProducao   Boolean?
+  flaExpedicao  Boolean?
+  flaPrioridade Boolean?
+  flaEstagio    Boolean?
+  flaSeparacao  Boolean?
+  flaAcertoCor  Boolean?
+  flaEnvase     Boolean?
+  flaSetor      Boolean?
+
+  @@index([id], map: "ClusteredIndex-20241017-095617", clustered: true)
+  @@ignore
+}
+
+model CRM_Usuario {
+  idUsuario         Int       @id(map: "PK_CRM_Usuario") @default(autoincrement())
+  idGrupo           Int?
+  Titulo            String?   @db.VarChar(500)
+  Nome              String?   @db.VarChar(500)
+  Senha             String?   @db.VarChar(50)
+  Email             String?   @db.VarChar(50)
+  Imagem            String?   @db.VarChar(50)
+  Telefone          String?   @db.VarChar(50)
+  WS                String?   @db.VarChar(50)
+  Endereco          String?   @db.VarChar(500)
+  DataUltimoLogin   DateTime? @db.DateTime
+  OrigemUltimoLogin String?   @db.VarChar(50)
+  flaAtivo          Boolean?
+  DataAniversario   DateTime? @db.Date
+  corHTML           String?   @db.VarChar(50)
+
+  @@index([idUsuario], map: "IX_CRM_Usuario_idUsuario_cover")
+}
+
+model CRM_UsuarioAtivacao {
+  id                Int       @id(map: "PK_CRM_UsuarioAtivacao") @default(autoincrement())
+  email             String?   @db.VarChar(50)
+  nivel             Int?
+  idUsuarioCadastro Int?
+  GUIDUsuario       String?   @db.VarChar(50)
+  dtaCadastro       DateTime? @db.DateTime
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_UsuarioEquipe {
+  idUsuario Int?
+  idEquipe  Int?
+
+  @@ignore
+}
+
+model CRM_UsuarioMeta {
+  id           Int       @id(map: "PK_CRM_UsuarioMeta") @default(autoincrement())
+  idUsuario    Int?
+  Ano          Int?
+  Mes          Int?
+  Meta         Float?
+  dtaAlteracao DateTime? @db.DateTime
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_XLS_Matriz {
+  Id         Int     @default(autoincrement())
+  A          String? @db.VarChar(500)
+  B          String? @db.VarChar(500)
+  C          String? @db.VarChar(500)
+  D          String? @db.VarChar(500)
+  E          String? @db.VarChar(500)
+  F          String? @db.VarChar(500)
+  G          String? @db.VarChar(500)
+  H          String? @db.VarChar(500)
+  I          String? @db.VarChar(500)
+  J          String? @db.VarChar(500)
+  K          String? @db.VarChar(500)
+  L          String? @db.VarChar(500)
+  M          String? @db.VarChar(500)
+  N          String? @db.VarChar(500)
+  O          String? @db.VarChar(500)
+  P          String? @db.VarChar(500)
+  Q          String? @db.VarChar(500)
+  R          String? @db.VarChar(500)
+  S          String? @db.VarChar(500)
+  T          String? @db.VarChar(500)
+  U          String? @db.VarChar(500)
+  V          String? @db.VarChar(500)
+  W          String? @db.VarChar(500)
+  X          String? @db.VarChar(500)
+  Y          String? @db.VarChar(500)
+  IdMaterial Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_XLS_Proposta {
+  A String? @db.VarChar(500)
+  B String? @db.VarChar(500)
+  C String? @db.VarChar(500)
+  D String? @db.VarChar(500)
+  E String? @db.VarChar(500)
+  F String? @db.VarChar(500)
+  G String? @db.VarChar(500)
+  H String? @db.VarChar(500)
+  I String? @db.VarChar(500)
+  J String? @db.VarChar(500)
+  K String? @db.VarChar(500)
+  L String? @db.VarChar(500)
+  M String? @db.VarChar(500)
+  N String? @db.VarChar(500)
+  O String? @db.VarChar(500)
+  P String? @db.VarChar(500)
+  Q String? @db.VarChar(500)
+  R String? @db.VarChar(500)
+  S String? @db.VarChar(500)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRMProducaoPedidosAbertos2_Temp {
+  idProposta         Int?
+  idcontato          Int?
+  PropostaNo         String? @db.VarChar(50)
+  nomComercial       String? @db.VarChar(1000)
+  idPropostaDetalhe  Int
+  idMaterial         Int?
+  NomMaterial        String? @db.VarChar(500)
+  codMaterial        String? @db.VarChar(50)
+  codMaterialMatriz  String? @db.VarChar(50)
+  idStatusPrioridade Int?
+  StatusPrioridade   String? @db.VarChar(50)
+  CorHTMLPrioridade  String? @db.VarChar(50)
+  idStatusSetor      Int?
+  StatusSetor        String? @db.VarChar(50)
+  CorHTMLSetor       String? @db.VarChar(50)
+  idStatusSeparacao  Int?
+  StatusSeparacao    String? @db.VarChar(50)
+  CorHTMLSeparacao   String? @db.VarChar(50)
+  idStatusProducao   Int?
+  StatusProducao     String? @db.VarChar(50)
+  CorHTMLProducao    String? @db.VarChar(50)
+  idStatusAcertoCor  Int?
+  StatusAcertoCor    String? @db.VarChar(50)
+  CorHTMLAcertoCor   String? @db.VarChar(50)
+  idStatusEnvase     Int?
+  StatusEnvase       String? @db.VarChar(50)
+  CorHTMLEnvase      String? @db.VarChar(50)
+  idStatusEstoque    Int?
+  StatusEstoque      String? @db.VarChar(50)
+  CorHTMLEstoque     String? @db.VarChar(50)
+  TTKG               Float?
+  TTCJ               Int?
+  Fator              Float?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model EltechNFEmitidas {
+  id            Int?
+  NF            String?   @db.VarChar(10)
+  Serie         String?   @db.VarChar(50)
+  Emissao       DateTime? @db.Date
+  CFOP          String?   @db.VarChar(50)
+  CodPagamento  String?   @db.VarChar(50)
+  Produto       String?   @db.VarChar(50)
+  Descricao     String?   @db.VarChar(50)
+  Quantidade    Decimal?  @db.Decimal(18, 4)
+  VlrUn         Decimal?  @db.Decimal(18, 4)
+  Total         Decimal?  @db.Decimal(18, 4)
+  Lote          String?   @db.VarChar(50)
+  dtaFabricacao DateTime? @db.Date
+  dtaValidade   DateTime? @db.Date
+  vlrDev        String?   @db.VarChar(50)
+
+  @@ignore
+}
+
+model EltechParametro {
+  idParametro Int     @id(map: "PK_EltechParametro") @default(autoincrement())
+  Parametro   String? @db.VarChar(100)
+  Valor       String? @db.VarChar(100)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model IntegracaoSistema_Cliente {
+  nome    String?   @db.VarChar(50)
+  celular String?   @db.VarChar(50)
+  email   String?   @db.VarChar(50)
+  data    DateTime? @db.DateTime
+
+  @@ignore
+}
+
+model JSONDados {
+  ID       Int       @id(map: "PK__JSONDado__3214EC271D1A88E7") @default(autoincrement())
+  JSONData String?   @db.NVarChar(Max)
+  Data     DateTime? @db.DateTime
+  Arquivo  String?   @db.VarChar(50)
+}
+
+model JsonData {
+  Id            Int     @id(map: "PK__JsonData__3214EC07E7B14C21") @default(autoincrement())
+  Relatorio     String? @db.VarChar(50)
+  Data          String? @db.NVarChar(Max)
+  PeriodoInicio String? @db.VarChar(50)
+  PeriodoFim    String? @db.VarChar(50)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model NCMIPI {
+  NCM String? @db.VarChar(50)
+  IPI String? @db.VarChar(50)
+
+  @@ignore
+}
+
+model sysdiagrams {
+  name         String @db.NVarChar(128)
+  principal_id Int
+  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B61D6DDD39D") @default(autoincrement())
+  version      Int?
+  definition   Bytes?
+
+  @@unique([principal_id, name], map: "UK_principal_name")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model t1 {
+  idComposicaoDetalhe   Int?
+  idPropostaDetalhe     Int
+  idProposta            Int?
+  idEtapa               Int?
+  idMaterialGrupo       Int
+  idComposicao          Int?
+  nomGrupo              String? @db.VarChar(100)
+  nomComposicao         String? @db.VarChar(1000)
+  idMaterial            Int
+  nomMaterial           String? @db.VarChar(500)
+  NCM                   String? @db.VarChar(50)
+  CodMaterial           String? @db.VarChar(50)
+  PesoEmbalagem         Float?
+  Unidade               String? @db.VarChar(100)
+  ValorEmbalagem        Float?
+  PrecoKg               Float?
+  ST                    String? @db.VarChar(50)
+  Quantidade            Int?
+  TotalKg               Float?
+  TotalKgGeral          Float?
+  IPI                   Float?
+  IPIValor              Float?
+  TotalIPIValor         Float?
+  TotalValor            Float?
+  TotalGeral            Float?
+  TotalQuantidade       Float?
+  TotalPesoComposicao   Float?
+  TotalGeralComposicao  Float?
+  TotalIPIComposicao    Float?
+  TotalIPIEtapa         Float?
+  TotalValorComposicao  Float?
+  TotalValorEtapa       Float?
+  TotalValorGrupo       Float?
+  Desconto              Float?
+  OrdemMaterial         Int?
+  OrdemComposicao       Int?
+  OrdemGrupo            Int?
+  OrdemEtapa            Int?
+  TotalGeralSemDesconto Float?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbCliente {
+  idCliente       Int       @default(autoincrement())
+  NomeEmpresa     String?   @db.VarChar(50)
+  email           String?   @db.VarChar(50)
+  senha           String?   @db.VarChar(50)
+  dtaCadastro     DateTime? @db.DateTime
+  dtaAlteracao    DateTime? @db.DateTime
+  dtaUltimoAcesso DateTime? @db.DateTime
+  logo            String?   @db.VarChar(50)
+  endereco        String?   @db.VarChar(50)
+
+  @@ignore
+}
+
+model tbFeriado {
+  id      Int       @id(map: "PK_tbFeriado") @default(autoincrement())
+  data    DateTime? @db.Date
+  feriado String?   @db.VarChar(500)
+}
+
+model tbFuncionarios {
+  id             Int     @id(map: "PK_tbFuncionarios") @default(autoincrement())
+  noFuncionarios String? @db.VarChar(50)
+}
+
+model tbLeads {
+  id             Int       @id(map: "PK_tbLeads") @default(autoincrement())
+  Fonte          String?   @db.VarChar(100)
+  nome           String?   @db.VarChar(100)
+  email          String?   @db.VarChar(100)
+  telefone       String?   @db.VarChar(100)
+  NoFuncionarios String?   @db.VarChar(100)
+  DataCadastro   DateTime? @db.DateTime
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbSegmento {
+  idSegmento Int
+  Numero     Int?
+  R          Int?
+  F          Int?
+  V          Int?
+  Segmento   String? @db.VarChar(500)
+  Ordem      Int?
+  OQueFazer  String? @db.VarChar(4000)
+  CorHTML    String? @db.VarChar(7)
+  CorBS      String? @db.VarChar(50)
+
+  @@index([Segmento], map: "ClusteredIndex-20241001-195636", clustered: true)
+  @@ignore
+}
+
+model tbSessaoEstrategica {
+  id                 Int       @id(map: "PK_tbSessaoEstrategica") @default(autoincrement())
+  session            String?   @db.VarChar(50)
+  Nome               String?   @db.VarChar(50)
+  whatsapp           String?   @db.VarChar(50)
+  email              String?   @db.VarChar(50)
+  origem             String?   @db.VarChar(100)
+  origemOutros       String?   @db.VarChar(1000)
+  papelEmpresa       String?   @db.VarChar(1000)
+  papelEmpresaOutros String?   @db.VarChar(1000)
+  produto            String?   @db.VarChar(500)
+  siteEmpresa        String?   @db.VarChar(1000)
+  timeComercial      String?   @db.VarChar(500)
+  faturamentoMensal  String?   @db.VarChar(500)
+  maiorDesafio       String?   @db.VarChar(4000)
+  oportunidade       String?   @db.VarChar(4000)
+  momento            String?   @db.VarChar(500)
+  dtaInicio          DateTime? @db.DateTime
+  dtaTermino         DateTime? @db.DateTime
+}
+
+model tbTabelaPreco {
+  id                 Int       @id(map: "PK_tbTabelaPreco") @default(autoincrement())
+  idUsuario          Int?
+  ArquivoNome        String?   @db.VarChar(500)
+  ArquivoNomeSistema String?   @db.VarChar(500)
+  ArquivoTipo        String?   @db.VarChar(500)
+  CaminhoArquivo     String?   @db.VarChar(500)
+  dtaCriacao         DateTime? @db.DateTime
+  Status             String?   @db.VarChar(50)
+}
+
+model tbTabelaPrecoImport {
+  id            Int     @id(map: "PK_tbTabelaPrecoImport") @default(autoincrement())
+  idTabelaPreco Int?
+  Linha         Int?
+  Coluna        Int?
+  Valor         String? @db.VarChar(500)
+}
+
+model temp {
+  id              Int     @id(map: "PK_temp") @default(autoincrement())
+  idMaterialGrupo Int?
+  idComposicao    Int?
+  idMaterial      Int?
+  Descricao       String? @db.VarChar(1000)
+  NCM             String? @db.VarChar(50)
+  CodMaterial     String? @db.VarChar(50)
+  Peso            String? @db.VarChar(50)
+}
