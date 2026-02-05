@@ -52,6 +52,8 @@ model CRM_Agenda {
   idAgendaStatus Int?
   idUsuario      Int?
   idContato      Int?
+
+  contato        CRM_Contato? @relation(fields: [idContato], references: [idContato], onUpdate: NoAction, onDelete: NoAction)
 }
 
 model CRM_AgendaStatus {
@@ -143,6 +145,14 @@ model CRM_Contato {
   fEmail              String?   @db.VarChar(100)
   SegmentoAtuacao     String?   @db.VarChar(100)
   CategoriaFinanceira String?   @db.VarChar(100)
+  
+  representante     CRM_Usuario? @relation(fields: [idRepresentante], references: [idUsuario], onUpdate: NoAction, onDelete: NoAction)
+  origem            CRM_Origem?  @relation(fields: [IdOrigem], references: [idOrigem], onUpdate: NoAction, onDelete: NoAction)
+  status            CRM_Status?  @relation(fields: [IdStatus], references: [idStatus], onUpdate: NoAction, onDelete: NoAction)
+
+  representantesAdicionais CRM_ContatoRepresentanteAdicional[]
+  propostas               CRM_Proposta[]
+  agenda                  CRM_Agenda[]
 
   @@index([dtaAlteracao, nomContato], map: "IX_CRM_Contato_dtaAlteracao_nomContato_cover")
   @@index([IdOrigem, dtaAlteracao(sort: Desc)], map: "IX_CRM_Contato_idOrigem_dtaAlteracao")
@@ -262,6 +272,9 @@ model CRM_ContatoRepresentanteAdicional {
   id              Int  @id(map: "PK_CRM_ContatoRepresentanteAdicional") @default(autoincrement())
   idContato       Int?
   idRepresentante Int?
+
+  contato       CRM_Contato? @relation(fields: [idContato], references: [idContato], onUpdate: NoAction, onDelete: NoAction)
+  representante CRM_Usuario? @relation(fields: [idRepresentante], references: [idUsuario], onUpdate: NoAction, onDelete: NoAction)
 
   @@index([idContato], map: "IX_CRM_ContatoRepresentanteAdicional_idContato")
   @@index([idContato], map: "NonClusteredIndex-20240529-102050")
@@ -570,6 +583,7 @@ model CRM_Origem {
   idOrigem Int     @id(map: "PK_CRM_Origem") @default(autoincrement())
   Origem   String? @db.VarChar(1000)
   corHTML  String? @db.VarChar(50)
+  contatos CRM_Contato[]
 
   @@index([idOrigem], map: "IX_CRM_Origem_idOrigem_cover")
 }
@@ -1547,6 +1561,9 @@ model CRM_Proposta {
   DataPossivel        DateTime? @db.DateTime
   Area                Int?
   ValorM2             Decimal?  @db.Decimal(18, 2)
+  dataProximoContato    DateTime? @db.DateTime
+  
+  contato               CRM_Contato? @relation(fields: [idContato], references: [idContato], onUpdate: NoAction, onDelete: NoAction)
 
   @@index([idContato], map: "IX_CRM_Proposta_idContato")
   @@index([idContato], map: "NonClusteredIndex-20241217-113506")
@@ -1912,6 +1929,7 @@ model CRM_Status {
   Status   String? @db.VarChar(100)
   Cor      String? @db.VarChar(50)
   CorHTML  String? @db.VarChar(50)
+  contatos CRM_Contato[]
 
   @@index([idStatus], map: "IX_CRM_Status_idStatus_cover")
 }
@@ -1948,6 +1966,8 @@ model CRM_Usuario {
   WS                String?   @db.VarChar(50)
   Endereco          String?   @db.VarChar(500)
   DataUltimoLogin   DateTime? @db.DateTime
+  contatos          CRM_Contato[]
+  representantesAdicionais CRM_ContatoRepresentanteAdicional[]
   OrigemUltimoLogin String?   @db.VarChar(50)
   flaAtivo          Boolean?
   DataAniversario   DateTime? @db.Date

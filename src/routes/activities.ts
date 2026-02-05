@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 export const activitiesRoutes = new Elysia({ prefix: '/atividades' })
     .get("/", async ({ query }) => {
@@ -14,158 +15,90 @@ export const activitiesRoutes = new Elysia({ prefix: '/atividades' })
             const dtaInicio = query.dtaInicio || null;
             const dtaFim = query.dtaFim || null;
 
-            // Build Prisma where clause
-            const whereClause: any = {};
+            // Build Raw SQL conditions
+            const conditions: Prisma.Sql[] = [];
 
-            // Filter by activity status
             if (idStatusAtividade.length > 0) {
-                whereClause.idAtividadeStatus = { in: idStatusAtividade };
+                conditions.push(Prisma.sql`a.idAtividadeStatus IN (${Prisma.join(idStatusAtividade)})`);
             }
 
-            // Filter by contact
             if (idContato.length > 0) {
-                whereClause.idContato = { in: idContato };
+                conditions.push(Prisma.sql`a.idContato IN (${Prisma.join(idContato)})`);
             }
 
-            // Filter by activity type
             if (idTipoAtividade.length > 0) {
-                whereClause.idAtividadeTipo = { in: idTipoAtividade };
+                conditions.push(Prisma.sql`a.idAtividadeTipo IN (${Prisma.join(idTipoAtividade)})`);
             }
 
-            // Filter by representative who created
             if (idRepresentanteGerou.length > 0) {
-                whereClause.idUsuario = { in: idRepresentanteGerou };
+                conditions.push(Prisma.sql`a.idUsuario IN (${Prisma.join(idRepresentanteGerou)})`);
             }
 
-            // Filter by date range for next contact date
             if (dtaInicio && dtaFim) {
-                whereClause.dtaProximoContato = {
-                    gte: new Date(dtaInicio),
-                    lte: new Date(dtaFim)
-                };
+                conditions.push(Prisma.sql`a.dtaProximoContato >= ${new Date(dtaInicio)} AND a.dtaProximoContato <= ${new Date(dtaFim)}`);
             }
-
-            // Complex OR condition for representative and status/origin through Contact
-            const contactWhere: any = {};
-            let contactIdsFromFilter: number[] | null = null;
 
             if (idRepresentante.length > 0) {
-                contactWhere.idRepresentante = { in: idRepresentante };
+                conditions.push(Prisma.sql`c.idRepresentante IN (${Prisma.join(idRepresentante)})`);
             }
 
             if (idStatus.length > 0) {
-                contactWhere.IdStatus = { in: idStatus }; // Note: Schema uses 'IdStatus'
+                conditions.push(Prisma.sql`c.IdStatus IN (${Prisma.join(idStatus)})`);
             }
 
             if (idOrigem.length > 0) {
-                contactWhere.IdOrigem = { in: idOrigem }; // Note: Schema uses 'IdOrigem'
+                conditions.push(Prisma.sql`c.IdOrigem IN (${Prisma.join(idOrigem)})`);
             }
 
-            if (Object.keys(contactWhere).length > 0) {
-                const filteredContacts = await prisma.cRM_Contato.findMany({
-                    where: contactWhere,
-                    select: { idContato: true }
-                });
-                contactIdsFromFilter = filteredContacts.map(c => c.idContato);
-            }
+            const whereClause = conditions.length > 0
+                ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+                : Prisma.empty;
 
-            // Main query using Prisma models
-            if (contactIdsFromFilter !== null) {
-                // If we filtered by contact attributes, intersect with existing idContato filter if any
-                if (whereClause.idContato) {
-                    const existingIn = whereClause.idContato.in;
-                    whereClause.idContato = { in: existingIn.filter((id: number) => contactIdsFromFilter!.includes(id)) };
-                } else {
-                    whereClause.idContato = { in: contactIdsFromFilter };
-                }
-            }
+            // Execute optimized raw SQL query
+            const activities = await prisma.$queryRaw<any[]>(Prisma.sql`
+                SELECT 
+                    a.idContatoUpdate,
+                    a.idContato,
+                    c.nomComercial,
+                    c.nomContato,
+                    cs.Status AS Status,
+                    cs.CorHTML AS StatusCorContato,
+                    co.Origem AS Origem,
+                    co.corHTML AS OrigemCorContato,
+                    a.CreatedAt AS dataCadastro,
+                    a.dtaProximoContato,
+                    at.AtividadeTipo,
+                    ass.StatusAtividade AS AtividadeStatus,
+                    ass.corHTML AS StatusCorAtividade,
+                    u.Nome AS Representante,
+                    c.idRepresentante
+                FROM CRM_ContatoUpdate a
+                LEFT JOIN CRM_Contato c ON a.idContato = c.idContato
+                LEFT JOIN CRM_Status cs ON c.IdStatus = cs.idStatus
+                LEFT JOIN CRM_Origem co ON c.IdOrigem = co.idOrigem
+                LEFT JOIN CRM_Usuario u ON c.idRepresentante = u.idUsuario
+                LEFT JOIN CRM_AtividadeTipo at ON a.idAtividadeTipo = at.id
+                LEFT JOIN CRM_ContatoUpdateStatus ass ON a.idAtividadeStatus = ass.idStatusAtividade
+                ${whereClause}
+                ORDER BY a.dtaProximoContato DESC
+            `);
 
-            const activities = await prisma.cRM_ContatoUpdate.findMany({
-                where: whereClause,
-                orderBy: {
-                    dtaProximoContato: 'desc'
-                }
-            });
-
-            if (activities.length === 0) {
-                return [];
-            }
-
-            // Fetch related data manually
-            const contactIds = [...new Set(activities.map(a => a.idContato).filter((id): id is number => id !== null))];
-            const statusIds = [...new Set(activities.map(a => a.idAtividadeStatus).filter((id): id is number => id !== null))];
-            const typeIds = [...new Set(activities.map(a => a.idAtividadeTipo).filter((id): id is number => id !== null))];
-            const userIds = [...new Set(activities.map(a => a.idUsuario).filter((id): id is number => id !== null))];
-
-            const [contacts, atividadeStatuses, atividadeTipos, users] = await Promise.all([
-                prisma.cRM_Contato.findMany({
-                    where: { idContato: { in: contactIds } }
-                }),
-                prisma.cRM_ContatoUpdateStatus.findMany({
-                    where: { idStatusAtividade: { in: statusIds } }
-                }),
-                prisma.cRM_AtividadeTipo.findMany({
-                    where: { id: { in: typeIds } }
-                }),
-                prisma.cRM_Usuario.findMany({
-                    where: { idUsuario: { in: userIds } }
-                })
-            ]);
-
-            // For deeper relations (Status and Origin of Contact), we need another step
-            const contactStatusIds = [...new Set(contacts.map(c => c.IdStatus).filter((id): id is number => id !== null))];
-            const contactOrigemIds = [...new Set(contacts.map(c => c.IdOrigem).filter((id): id is number => id !== null))];
-            const contactRepIds = [...new Set(contacts.map(c => c.idRepresentante).filter((id): id is number => id !== null))];
-
-            const [contactStatuses, contactOrigens, contactReps] = await Promise.all([
-                prisma.cRM_Status.findMany({
-                    where: { idStatus: { in: contactStatusIds } }
-                }),
-                prisma.cRM_Origem.findMany({
-                    where: { idOrigem: { in: contactOrigemIds } }
-                }),
-                prisma.cRM_Usuario.findMany({
-                    where: { idUsuario: { in: contactRepIds } }
-                })
-            ]);
-
-            // Create lookup maps
-            const contactMap = new Map(contacts.map(c => [c.idContato, c]));
-            const atividadeStatusMap = new Map(atividadeStatuses.map(s => [s.idStatusAtividade, s]));
-            const atividadeTipoMap = new Map(atividadeTipos.map(t => [t.id, t]));
-            // const userMap = new Map(users.map(u => [u.idUsuario, u]));
-            const contactStatusMap = new Map(contactStatuses.map(s => [s.idStatus, s]));
-            const contactOrigemMap = new Map(contactOrigens.map(o => [o.idOrigem, o]));
-            const contactRepMap = new Map(contactReps.map(r => [r.idUsuario, r]));
-
-            // Map results to match the expected format
-            const formattedActivities = activities.map(activity => {
-                const contact = activity.idContato ? contactMap.get(activity.idContato) : null;
-                const cStatus = contact?.IdStatus ? contactStatusMap.get(contact.IdStatus) : null;
-                const cOrigem = contact?.IdOrigem ? contactOrigemMap.get(contact.IdOrigem) : null;
-                const cRep = contact?.idRepresentante ? contactRepMap.get(contact.idRepresentante) : null;
-                const aStatus = activity.idAtividadeStatus ? atividadeStatusMap.get(activity.idAtividadeStatus) : null;
-                const aTipo = activity.idAtividadeTipo ? atividadeTipoMap.get(activity.idAtividadeTipo) : null;
-
-                return {
-                    idContatoUpdate: activity.idContatoUpdate,
-                    idContato: activity.idContato,
-                    nomContato: contact?.nomComercial || contact?.nomContato || '',
-                    Status: cStatus?.Status || '',
-                    StatusCorContato: cStatus?.CorHTML || '',
-                    Origem: cOrigem?.Origem || '',
-                    OrigemCorContato: cOrigem?.corHTML || '',
-                    dataCadastro: activity.CreatedAt, // Note: Schema uses 'CreatedAt'
-                    dtaProximoContato: activity.dtaProximoContato,
-                    AtividadeTipo: aTipo?.AtividadeTipo || '',
-                    AtividadeStatus: aStatus?.StatusAtividade || '',
-                    StatusCorAtividade: aStatus?.corHTML || '',
-                    Representante: cRep?.Nome || '',
-                    idRepresentante: contact?.idRepresentante
-                };
-            });
-
-            return formattedActivities;
+            return activities.map(activity => ({
+                idContatoUpdate: activity.idContatoUpdate,
+                idContato: activity.idContato,
+                nomContato: activity.nomComercial || activity.nomContato || '',
+                Status: activity.Status || '',
+                StatusCorContato: activity.StatusCorContato || '',
+                Origem: activity.Origem || '',
+                OrigemCorContato: activity.OrigemCorContato || '',
+                dataCadastro: activity.dataCadastro,
+                dtaProximoContato: activity.dtaProximoContato,
+                AtividadeTipo: activity.AtividadeTipo || '',
+                AtividadeStatus: activity.AtividadeStatus || '',
+                StatusCorAtividade: activity.StatusCorAtividade || '',
+                Representante: activity.Representante || '',
+                idRepresentante: activity.idRepresentante
+            }));
         } catch (error) {
             console.error("Error fetching activities:", error);
             return { error: "Failed to fetch activities data" };
@@ -182,4 +115,40 @@ export const activitiesRoutes = new Elysia({ prefix: '/atividades' })
             dtaInicio: t.Optional(t.String()),
             dtaFim: t.Optional(t.String())
         })
+    })
+    .get("/test-pipeline", async () => {
+        try {
+            const pipelines = await prisma.cRM_Contato.findMany({
+                select: { Pipeline: true },
+                distinct: ['Pipeline']
+            });
+            return pipelines.map(p => p.Pipeline).filter(Boolean);
+        } catch (error) {
+            console.error(error);
+            return { error: "Failed" };
+        }
+    })
+    .get("/filter-options", async () => {
+        try {
+            const [contacts, statuses, origens, activityTypes, activityStatuses, representatives] = await Promise.all([
+                prisma.cRM_Contato.findMany({ select: { idContato: true, nomComercial: true, nomContato: true }, orderBy: { nomComercial: 'asc' } }),
+                prisma.cRM_Status.findMany({ select: { idStatus: true, Status: true }, orderBy: { Status: 'asc' } }),
+                prisma.cRM_Origem.findMany({ select: { idOrigem: true, Origem: true }, orderBy: { Origem: 'asc' } }),
+                prisma.cRM_AtividadeTipo.findMany({ select: { id: true, AtividadeTipo: true }, orderBy: { AtividadeTipo: 'asc' } }),
+                prisma.cRM_ContatoUpdateStatus.findMany({ select: { idStatusAtividade: true, StatusAtividade: true }, orderBy: { StatusAtividade: 'asc' } }),
+                prisma.cRM_Usuario.findMany({ select: { idUsuario: true, Nome: true }, orderBy: { Nome: 'asc' } })
+            ]);
+
+            return {
+                contacts: contacts.map(c => ({ value: c.idContato.toString(), label: c.nomComercial || c.nomContato || '' })),
+                statuses: statuses.map(s => ({ value: s.idStatus.toString(), label: s.Status || '' })),
+                origens: origens.map(o => ({ value: o.idOrigem.toString(), label: o.Origem || '' })),
+                activityTypes: activityTypes.map(t => ({ value: t.id.toString(), label: t.AtividadeTipo || '' })),
+                activityStatuses: activityStatuses.map(s => ({ value: s.idStatusAtividade.toString(), label: s.StatusAtividade || '' })),
+                representatives: representatives.map(r => ({ value: r.idUsuario.toString(), label: r.Nome || '' }))
+            };
+        } catch (error) {
+            console.error("Error fetching filter options:", error);
+            return { error: "Failed to fetch filter options" };
+        }
     });
