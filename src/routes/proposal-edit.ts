@@ -1,0 +1,285 @@
+import { Elysia, t } from "elysia";
+import { prisma } from "../lib/prisma";
+
+function convertBigIntToNumber(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'bigint') return Number(obj);
+    if (obj instanceof Date) return obj;
+    if (typeof obj === 'object') {
+        if (Array.isArray(obj)) return obj.map(item => convertBigIntToNumber(item));
+        if (obj.constructor?.name === 'Decimal' || (obj.s !== undefined && obj.e !== undefined && obj.d !== undefined)) {
+            return Number(obj.toString?.() ?? obj);
+        }
+        const converted: any = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                converted[key] = convertBigIntToNumber(obj[key]);
+            }
+        }
+        return converted;
+    }
+    return obj;
+}
+
+export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
+    .get("/:id", async ({ params }) => {
+        const id = Number(params.id);
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                t1.idProposta,
+                t1.PropostaNo,
+                t1.idStatus,
+                t1.idContato,
+                t1.idUsuario,
+                t1.TotalValor,
+                t1.TotalKg,
+                t1.Desconto,
+                t1.Observacao,
+                t1.Possibilidade,
+                t1.GanhoEstimado,
+                t1.Area,
+                t1.ValorM2,
+                t1.FundoPobreza,
+                t1.CalculaDifal,
+                t1.idFrete,
+                t1.idCondicaoPagamento,
+                t1.idOutros,
+                t1.ValorOutros,
+                t1.idDifal,
+                DataPossivel = CASE WHEN t1.DataPossivel IS NULL THEN '' ELSE FORMAT(t1.DataPossivel, 'yyyy-MM-dd') END,
+                dtaValidade = CASE WHEN t1.dtaValidade IS NULL THEN '' ELSE FORMAT(t1.dtaValidade, 'yyyy-MM-dd') END,
+                UF = t2.UF,
+                ClienteNome = CASE WHEN t3.nomComercial IS NOT NULL AND t3.nomComercial <> '' THEN t3.nomComercial ELSE t3.nomContato END,
+                Status = t4.Status,
+                CorHTML = t4.CorHTML
+            FROM CRM_Proposta AS t1
+            LEFT OUTER JOIN CRM_Proposta_Difal AS t2 ON t1.idDifal = t2.idDifal
+            LEFT OUTER JOIN CRM_Contato AS t3 ON t1.idContato = t3.idContato
+            LEFT OUTER JOIN CRM_Proposta_Status AS t4 ON t1.idStatus = t4.idStatus
+            WHERE t1.idProposta = ${id}
+        `);
+        if (!results.length) return { error: "Proposta não encontrada" };
+        return convertBigIntToNumber(results[0]);
+    })
+    .get("/commercial/:id", async ({ params }) => {
+        const id = Number(params.id);
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                t1.PropostaNo,
+                t1.ObsChecagem,
+                t1.ValorM2,
+                ClienteNome = CASE WHEN t3.nomComercial IS NOT NULL AND t3.nomComercial <> '' THEN t3.nomComercial ELSE t3.nomContato END,
+                CNPJ = ISNULL(t3.CNPJ, ''),
+                Contato = ISNULL(t3.nomContato, ''),
+                Telefone = ISNULL(t3.Telefone, ''),
+                Email = ISNULL(t3.email, ''),
+                Frete = ISNULL(t5.Titulo, ''),
+                CondicaoPagamento = ISNULL(t6.Titulo, ''),
+                dtaCriacao = CASE WHEN t1.dtaCriacao IS NULL THEN '' ELSE FORMAT(t1.dtaCriacao, 'dd/MM/yyyy') END,
+                Representante = ISNULL(t7.Nome, ''),
+                RepresentanteEmail = ISNULL(t7.Email, ''),
+                RepresentanteTelefone = ISNULL(t7.Telefone, '')
+            FROM CRM_Proposta AS t1
+            LEFT OUTER JOIN CRM_Contato AS t3 ON t1.idContato = t3.idContato
+            LEFT OUTER JOIN CRM_Proposta_Frete AS t5 ON t1.idFrete = t5.idFrete
+            LEFT OUTER JOIN CRM_Proposta_CondicaoPagamento AS t6 ON t1.idCondicaoPagamento = t6.idCondicaoPagamento
+            LEFT OUTER JOIN CRM_Usuario AS t7 ON t3.idRepresentante = t7.idUsuario
+            WHERE t1.idProposta = ${id}
+        `);
+        if (!results.length) return { error: "Proposta não encontrada" };
+        const r = results[0];
+        return {
+            propostaNo: r.PropostaNo || "",
+            clienteNome: r.ClienteNome || "",
+            cnpj: r.CNPJ || "",
+            contato: r.Contato || "",
+            telefone: r.Telefone || "",
+            email: r.Email || "",
+            frete: r.Frete || "",
+            condicaoPagamento: r.CondicaoPagamento || "",
+            dtaCriacao: r.dtaCriacao || "",
+            observacao: r.ObsChecagem || "",
+            valorM2: Number(r.ValorM2 || 0),
+            representante: r.Representante || "",
+            representanteEmail: r.RepresentanteEmail || "",
+            representanteTelefone: r.RepresentanteTelefone || "",
+        };
+    })
+    .get("/:id/items", async ({ params }) => {
+        const id = Number(params.id);
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                t1.idPropostaDetalhe,
+                t1.idProposta,
+                t1.idMaterial,
+                t1.Quantidade,
+                t1.Desconto,
+                t1.MaterialDescricao,
+                t2.nomMaterial,
+                t2.CodMaterial,
+                t2.NCM,
+                t2.PesoEmbalagem,
+                t2.PrecoKg,
+                ValorEmbalagem = ISNULL(t2.ValorEmbalagem, ISNULL(t2.PrecoKg, 0) * ISNULL(t2.PesoEmbalagem, 0)),
+                t2.IPI
+            FROM CRM_Proposta_Detalhe AS t1
+            LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial
+            WHERE t1.idProposta = ${id}
+            ORDER BY t1.idPropostaDetalhe
+        `);
+        return convertBigIntToNumber(results);
+    })
+    .get("/:id/totals", async ({ params }) => {
+        const id = Number(params.id);
+        // First get PropostaNo
+        const prop: any[] = await prisma.$queryRawUnsafe(
+            `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
+        );
+        if (!prop.length) return { error: "Proposta não encontrada" };
+        const propostaNo = prop[0].PropostaNo;
+        if (!propostaNo) return { error: "Proposta sem número" };
+
+        const results: any[] = await prisma.$queryRawUnsafe(
+            `EXEC sp_CRMPropostaDetalhe @PropostaNo = '${propostaNo}'`
+        );
+        return convertBigIntToNumber(results);
+    })
+    .get("/products", async () => {
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                t1.idMaterial,
+                t1.nomMaterial AS Descricao,
+                t1.CodMaterial AS Codigo,
+                t1.idMaterialGrupo,
+                t2.nomGrupo AS Grupo
+            FROM CRM_Produto_Material AS t1
+            LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
+            WHERE t1.flaAtivo = 1
+            ORDER BY t2.nomGrupo, t1.nomMaterial
+        `);
+        return convertBigIntToNumber(results);
+    })
+    .get("/products/search", async ({ query }) => {
+        const q = query.q || "";
+        if (!q) return [];
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT TOP 50
+                t1.idMaterial,
+                t1.nomMaterial AS Descricao,
+                t1.CodMaterial AS Codigo,
+                t1.idMaterialGrupo,
+                t2.nomGrupo AS Grupo
+            FROM CRM_Produto_Material AS t1
+            LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
+            WHERE t1.flaAtivo = 1
+                AND (t1.nomMaterial LIKE '%${q}%' OR t1.CodMaterial LIKE '%${q}%')
+            ORDER BY t1.nomMaterial
+        `);
+        return convertBigIntToNumber(results);
+    })
+    .get("/product-detail/:propostaNo/:idMaterial", async ({ params }) => {
+        const { propostaNo, idMaterial } = params;
+        const results: any[] = await prisma.$queryRawUnsafe(
+            `EXEC sp_CRMTabelaPrecoIndividual @PropostaNo = '${propostaNo}', @idMaterial = ${Number(idMaterial)}`
+        );
+        if (!results.length) return { error: "Produto não encontrado" };
+        return convertBigIntToNumber(results[0]);
+    })
+    .get("/dropdowns", async () => {
+        const [ufs, fretes, condicoes, outros]: any[] = await Promise.all([
+            prisma.$queryRawUnsafe(`SELECT idDifal, UF FROM CRM_Proposta_Difal ORDER BY UF`),
+            prisma.$queryRawUnsafe(`SELECT idFrete, Titulo AS Descricao FROM CRM_Proposta_Frete WHERE flaAtivo = 1 ORDER BY Titulo`),
+            prisma.$queryRawUnsafe(`SELECT idCondicaoPagamento, Titulo AS Descricao FROM CRM_Proposta_CondicaoPagamento WHERE flaAtivo = 1 ORDER BY Titulo`),
+            prisma.$queryRawUnsafe(`SELECT idOutros, Outros AS Descricao FROM CRM_Proposta_Outros WHERE flaAtivo = 1 ORDER BY Outros`),
+        ]);
+        return {
+            ufs: convertBigIntToNumber(ufs),
+            fretes: convertBigIntToNumber(fretes),
+            condicoes: convertBigIntToNumber(condicoes),
+            outros: convertBigIntToNumber(outros),
+        };
+    })
+    .get("/etapas/:idProposta", async ({ params }) => {
+        const id = Number(params.idProposta);
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT idEtapa, Etapa, Descricao, Ordem FROM CRM_Proposta_Etapa WHERE idProposta = ${id} ORDER BY Ordem
+        `);
+        return convertBigIntToNumber(results);
+    })
+    .put("/:id", async ({ params, body }) => {
+        const id = Number(params.id);
+        const {
+            idDifal, CalculaDifal, Desconto, idFrete, idCondicaoPagamento, Observacao,
+            Possibilidade, GanhoEstimado, DataPossivel, dtaValidade, Area, ValorM2, FundoPobreza,
+            idOutros, ValorOutros
+        } = body as any;
+
+        const sets: string[] = [];
+        if (idDifal !== undefined) sets.push(`idDifal = ${Number(idDifal)}`);
+        if (CalculaDifal !== undefined) sets.push(`CalculaDifal = ${Number(CalculaDifal)}`);
+        if (Desconto !== undefined) sets.push(`Desconto = ${Number(Desconto)}`);
+        if (idFrete !== undefined) sets.push(`idFrete = ${Number(idFrete)}`);
+        if (idCondicaoPagamento !== undefined) sets.push(`idCondicaoPagamento = ${Number(idCondicaoPagamento)}`);
+        if (Observacao !== undefined) sets.push(`Observacao = '${String(Observacao).replace(/'/g, "''")}'`);
+        if (Possibilidade !== undefined) sets.push(`Possibilidade = ${Number(Possibilidade)}`);
+        if (GanhoEstimado !== undefined) sets.push(`GanhoEstimado = ${Number(GanhoEstimado)}`);
+        if (DataPossivel !== undefined) sets.push(`DataPossivel = '${DataPossivel}'`);
+        if (dtaValidade !== undefined) sets.push(`dtaValidade = '${dtaValidade}'`);
+        if (Area !== undefined) sets.push(`Area = ${Number(Area)}`);
+        if (ValorM2 !== undefined) sets.push(`ValorM2 = ${Number(ValorM2)}`);
+        if (FundoPobreza !== undefined) sets.push(`FundoPobreza = ${Number(FundoPobreza)}`);
+        if (idOutros !== undefined) sets.push(`idOutros = ${Number(idOutros)}`);
+        if (ValorOutros !== undefined) sets.push(`ValorOutros = ${Number(ValorOutros)}`);
+
+        if (!sets.length) return { error: "Nenhum campo para atualizar" };
+
+        await prisma.$queryRawUnsafe(`UPDATE CRM_Proposta SET ${sets.join(", ")} WHERE idProposta = ${id}`);
+        return { success: true };
+    })
+    .put("/:id/generate-code", async ({ params, body }) => {
+        const id = Number(params.id);
+        const { amostra } = body as any;
+        const prop: any[] = await prisma.$queryRawUnsafe(
+            `SELECT Desconto, idDifal FROM CRM_Proposta WHERE idProposta = ${id}`
+        );
+        if (!prop.length) return { error: "Proposta não encontrada" };
+        const { Desconto, idDifal } = prop[0];
+
+        let imposto = 0;
+        if (idDifal) {
+            const difal: any[] = await prisma.$queryRawUnsafe(
+                `SELECT AliqEst FROM CRM_Proposta_Difal WHERE idDifal = ${Number(idDifal)}`
+            );
+            if (difal.length && difal[0].AliqEst) {
+                imposto = Number(difal[0].AliqEst) * 100;
+            }
+        }
+
+        const descontoPct = Math.round(Number(Desconto || 0) * 100);
+        const amostraFlag = Number(amostra || 0);
+
+        const results: any[] = await prisma.$queryRawUnsafe(
+            `EXEC sp_CRMGeraNoProposta @idProposta = ${id}, @Desconto = ${descontoPct}, @Imposto = '${imposto}', @Amostra = ${amostraFlag}`
+        );
+        if (results.length) {
+            return { PropostaNo: results[0].PropostaNo };
+        }
+        return { error: "Falha ao gerar código" };
+    }, {
+        body: t.Object({ amostra: t.Optional(t.Number()) })
+    })
+    .post("/:id/items", async ({ params, body }) => {
+        const id = Number(params.id);
+        const { idMaterial, Quantidade, Desconto, MaterialDescricao } = body as any;
+
+        await prisma.$queryRawUnsafe(`
+            INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
+            VALUES (${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${String(MaterialDescricao || '').replace(/'/g, "''")}', 0, 0, 0, 0, 0, 0)
+        `);
+        return { success: true };
+    })
+    .delete("/:id/items/:itemId", async ({ params }) => {
+        const itemId = Number(params.itemId);
+        await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
+        return { success: true };
+    });

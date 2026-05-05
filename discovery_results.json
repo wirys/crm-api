@@ -1,0 +1,228 @@
+{
+  "contactStatuses": [
+    {
+      "idStatus": 1,
+      "Status": "SOLICITAÇÃO DE PROPOSTA",
+      "Cor": "btn-cor01",
+      "CorHTML": "#34699F"
+    },
+    {
+      "idStatus": 2,
+      "Status": "TROCOU CNPJ",
+      "Cor": "btn-cor02",
+      "CorHTML": "#ee6868"
+    },
+    {
+      "idStatus": 3,
+      "Status": "PROPOSTA ENVIADA",
+      "Cor": "btn-cor03",
+      "CorHTML": "#3FD4CE"
+    },
+    {
+      "idStatus": 4,
+      "Status": "FOLLOW-UP DE PROPOSTA",
+      "Cor": "btn-cor04",
+      "CorHTML": "#8E64D4"
+    },
+    {
+      "idStatus": 5,
+      "Status": "SOLICITAÇÃO DE AMOSTRA",
+      "Cor": "btn-cor05",
+      "CorHTML": "#D4C269"
+    },
+    {
+      "idStatus": 6,
+      "Status": "AMOSTRA ENVIADA",
+      "Cor": "btn-cor06",
+      "CorHTML": "#FFAFF1"
+    },
+    {
+      "idStatus": 7,
+      "Status": "FOLLOW UP DE AMOSTRA",
+      "Cor": "btn-cor07",
+      "CorHTML": "#268AE5"
+    },
+    {
+      "idStatus": 8,
+      "Status": "NEGOCIAÇÃO EM ANDAMENTO",
+      "Cor": "btn-cor08",
+      "CorHTML": "#FFB867"
+    },
+    {
+      "idStatus": 9,
+      "Status": "RECOMPRA",
+      "Cor": "btn-cor09",
+      "CorHTML": "#61A9F8"
+    },
+    {
+      "idStatus": 11,
+      "Status": "TRAVADO",
+      "Cor": "btn-cor11",
+      "CorHTML": "#82555b"
+    },
+    {
+      "idStatus": 12,
+      "Status": "FECHOU A FÁBRICA",
+      "Cor": "btn-cor12",
+      "CorHTML": "#CDCDCD"
+    },
+    {
+      "idStatus": 14,
+      "Status": "FOLLOW UP",
+      "Cor": "btn-cor14",
+      "CorHTML": "#E589BB"
+    },
+    {
+      "idStatus": 16,
+      "Status": "ENVIO DE EMAIL",
+      "Cor": "btn-cor16",
+      "CorHTML": "#269269"
+    },
+    {
+      "idStatus": 17,
+      "Status": "A/C LUCAS",
+      "Cor": "btn-cor17",
+      "CorHTML": "#FFD456"
+    },
+    {
+      "idStatus": 18,
+      "Status": "AGENDAR VISITA",
+      "Cor": "btn-cor18",
+      "CorHTML": "#A5DA5C"
+    },
+    {
+      "idStatus": 22,
+      "Status": "AGUARDANDO PAGAMENTO",
+      "Cor": "btn-cor22",
+      "CorHTML": "#64D0F8"
+    },
+    {
+      "idStatus": 24,
+      "Status": "EMAIL DE APRESENTAÇÃO",
+      "Cor": "btn-cor24",
+      "CorHTML": "#956D64"
+    },
+    {
+      "idStatus": 25,
+      "Status": "1ª COMPRA",
+      "Cor": "btn-cor25",
+      "CorHTML": "#459660"
+    },
+    {
+      "idStatus": 26,
+      "Status": "POTENCIAL DE COMPRA",
+      "Cor": null,
+      "CorHTML": "#d0a9a9"
+    },
+    {
+      "idStatus": 27,
+      "Status": "CLIENTE PERDIDO",
+      "Cor": null,
+      "CorHTML": "#e00000"
+    }
+  ],
+  "proposalStatuses": [
+    {
+      "idStatus": 1,
+      "Status": "Criação Proposta",
+      "CorHTML": "#4287f5"
+    },
+    {
+      "idStatus": 2,
+      "Status": "Checagem",
+      "CorHTML": "#fc9d03"
+    },
+    {
+      "idStatus": 3,
+      "Status": "Validado",
+      "CorHTML": "#03b1fc"
+    },
+    {
+      "idStatus": 4,
+      "Status": "Enviado",
+      "CorHTML": "#03f4fc"
+    },
+    {
+      "idStatus": 5,
+      "Status": "Aprovado pelo cliente",
+      "CorHTML": "#328001"
+    },
+    {
+      "idStatus": 6,
+      "Status": "Reprovado",
+      "CorHTML": "#fc2003"
+    },
+    {
+      "idStatus": 7,
+      "Status": "Rejeitado pelo Cliente",
+      "CorHTML": "#fc4e03"
+    },
+    {
+      "idStatus": 8,
+      "Status": "Amostra Enviada",
+      "CorHTML": "#f7e981"
+    },
+    {
+      "idStatus": 9,
+      "Status": "Amostra Aprovada",
+      "CorHTML": "#cef781"
+    },
+    {
+      "idStatus": 10,
+      "Status": "Amostras Reprovadas",
+      "CorHTML": "#f06f48"
+    }
+  ],
+  "origins": [
+    {
+      "idOrigem": 2,
+      "Origem": "NÃO CLASSIFICADO",
+      "corHTML": "#c4c4c4"
+    },
+    {
+      "idOrigem": 3,
+      "Origem": "CLIENTE ATIVO",
+      "corHTML": "#1dccc5"
+    },
+    {
+      "idOrigem": 4,
+      "Origem": "CLIENTE INATIVO",
+      "corHTML": "#ff178a"
+    },
+    {
+      "idOrigem": 5,
+      "Origem": "GOOGLE",
+      "corHTML": "#ffac4d"
+    },
+    {
+      "idOrigem": 6,
+      "Origem": "INDICAÇÃO",
+      "corHTML": "#00c87a"
+    },
+    {
+      "idOrigem": 9,
+      "Origem": "LISTA ROSE",
+      "corHTML": "#c43455"
+    },
+    {
+      "idOrigem": 10,
+      "Origem": "LISTA SALOMÃO",
+      "corHTML": "#a5bee6"
+    },
+    {
+      "idOrigem": 12,
+      "Origem": "PROSPECÇÃO",
+      "corHTML": "#ed455f"
+    },
+    {
+      "idOrigem": 13,
+      "Origem": "REDE SOCIAL",
+      "corHTML": "#be04b8"
+    },
+    {
+      "idOrigem": 14,
+      "Origem": "VISITA",
+      "corHTML": "#ffcc38"
+    }
+  ]
+}

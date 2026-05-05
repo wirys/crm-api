@@ -1,6 +1,29 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 
+// Helper function to convert BigInt to Number recursively
+function convertBigIntToNumber(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+
+    if (typeof obj === 'bigint') {
+        return Number(obj);
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => convertBigIntToNumber(item));
+    }
+
+    if (typeof obj === 'object') {
+        const converted: any = {};
+        for (const key in obj) {
+            converted[key] = convertBigIntToNumber(obj[key]);
+        }
+        return converted;
+    }
+
+    return obj;
+}
+
 export const contactsRoutes = new Elysia({ prefix: "/contacts" })
     .get("/segments", async () => {
         return await prisma.cRM_SegmentoAtuacao.findMany({
@@ -10,6 +33,16 @@ export const contactsRoutes = new Elysia({ prefix: "/contacts" })
                 SegmentoAtuacao: true,
             },
             orderBy: { Cod: "asc" },
+        });
+    })
+    .get("/statuses", async () => {
+        return await prisma.cRM_Status.findMany({
+            select: {
+                idStatus: true,
+                Status: true,
+                CorHTML: true,
+            },
+            orderBy: { Status: "asc" },
         });
     })
     .get("/origins", async () => {
@@ -27,6 +60,16 @@ export const contactsRoutes = new Elysia({ prefix: "/contacts" })
             select: {
                 idUsuario: true,
                 Nome: true,
+            },
+            orderBy: { Nome: "asc" },
+        });
+    })
+    .get("/representatives-full", async () => {
+        return await prisma.cRM_Usuario.findMany({
+            select: {
+                idUsuario: true,
+                Nome: true,
+                corHTML: true,
             },
             orderBy: { Nome: "asc" },
         });
@@ -94,14 +137,16 @@ export const contactsRoutes = new Elysia({ prefix: "/contacts" })
             take: 200,
         });
 
-        // Flatten some data for easier consumption in frontend
-        return contactsList.map(c => ({
+        // Flatten some data for easier consumption in frontend and convert BigInt
+        const result = contactsList.map(c => ({
             ...c,
             intProposta: c._count.propostas,
             interactionCount: c._count.agenda,
             proximaAtividade: c.agenda[0]?.DataInicio || null,
             representantesAdicionais: c.representantesAdicionais.map(ra => ra.representante?.Nome).filter(Boolean)
         }));
+
+        return convertBigIntToNumber(result);
     })
     .post(
         "/",
@@ -199,5 +244,34 @@ export const contactsRoutes = new Elysia({ prefix: "/contacts" })
                     idUsuario: t.Optional(t.Number()),
                 }),
             }),
+        }
+    )
+    .patch(
+        "/:id",
+        async ({ params, body, set }) => {
+            try {
+                const contactId = parseInt(params.id);
+
+                await prisma.cRM_Contato.update({
+                    where: { idContato: contactId },
+                    data: body as any
+                });
+
+                return { message: "Contato atualizado com sucesso!" };
+            } catch (e) {
+                console.error(e);
+                set.status = 500;
+                return { message: "Erro ao atualizar contato." };
+            }
+        },
+        {
+            params: t.Object({
+                id: t.String()
+            }),
+            body: t.Object({
+                IdStatus: t.Optional(t.Number()),
+                IdOrigem: t.Optional(t.Number()),
+                idRepresentante: t.Optional(t.Number()),
+            })
         }
     );

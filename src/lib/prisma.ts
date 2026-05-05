@@ -18,8 +18,8 @@ const sqlConfig = {
     idleTimeoutMillis: 30000,
   },
   options: {
-    encrypt: params.encrypt === 'true',
-    trustServerCertificate: params.trustServerCertificate === 'true',
+    encrypt: false,
+    trustServerCertificate: true,
   },
 };
 

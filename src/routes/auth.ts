@@ -75,6 +75,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
                 token,
                 user: {
                     id: user.idUsuario,
+                    idGrupo: user.idGrupo,
                     name: user.Nome,
                     email: user.Email,
                     avatar: user.Imagem,
