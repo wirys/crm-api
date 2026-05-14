@@ -15,6 +15,15 @@ import {arquivosRoutes, atividadeStatusRoutes, atividadeTipoRoutes, interacaoRou
 import { pedidoNfeRoutes } from "./routes/pedido-nfe";
 import { pipelineRoutes } from "./routes/pipeline";
 import { proposalEditRoutes } from "./routes/proposal-edit";
+import { checagemRoutes } from "./routes/checagem";
+import { expedicaoRoutes } from "./routes/expedicao";
+import { producaoRoutes } from "./routes/producao";
+import { separacaoRoutes } from "./routes/separacao";
+import { rastreamentoRoutes } from "./routes/rastreamento";
+import { agendaRoutes } from "./routes/agenda";
+import { dashboardStatsRoutes } from "./routes/dashboard-stats";
+import { lixeiraRoutes } from "./routes/lixeira";
+import { perfilRoutes } from "./routes/perfil";
 
 const {URL, PORT} = Bun.env;
 
@@ -40,6 +49,15 @@ export const app = new Elysia()
     .use(pedidoNfeRoutes)
     .use(pipelineRoutes)
     .use(proposalEditRoutes)
+    .use(checagemRoutes)
+    .use(expedicaoRoutes)
+    .use(producaoRoutes)
+    .use(separacaoRoutes)
+    .use(rastreamentoRoutes)
+    .use(agendaRoutes)
+    .use(dashboardStatsRoutes)
+    .use(lixeiraRoutes)
+    .use(perfilRoutes)
   .use(openapi({
         path: '/docs',
         documentation: {

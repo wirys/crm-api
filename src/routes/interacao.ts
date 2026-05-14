@@ -274,7 +274,7 @@ export const arquivosRoutes = new Elysia({ prefix: "/arquivos" })
     // GET - Download de arquivo
     .get("/download/:id", async ({ params }) => {
         try {
-            const arquivo = await prisma.$queryRaw`
+            const arquivo = await prisma.$queryRaw<any[]>`
                 SELECT ArquivoNome, CaminhoArquivo, ArquivoTipo
                 FROM CRM_ContatoArquivo
                 WHERE id = ${parseInt(params.id)}
@@ -308,7 +308,7 @@ export const arquivosRoutes = new Elysia({ prefix: "/arquivos" })
     // DELETE - Deletar arquivo
     .delete("/:id", async ({ params }) => {
         try {
-            const arquivo = await prisma.$queryRaw`
+            const arquivo = await prisma.$queryRaw<any[]>`
                 SELECT CaminhoArquivo
                 FROM CRM_ContatoArquivo
                 WHERE id = ${parseInt(params.id)}

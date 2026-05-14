@@ -83,60 +83,43 @@ export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
         }
 
         // --- 3. PERFORMANCE BY REPRESENTATIVE (Top Sellers) ---
-        let repRanking: any[] = [];
-        const allWonProposalsForRanking = await prisma.cRM_Proposta.findMany({
-            where: { idStatus: { in: [5, 9] } },
-            include: {
-                contato: {
-                    include: { representante: true }
-                }
-            }
-        });
-
-        const repMap: Record<string, { id: number, name: string, value: number, count: number }> = {};
-        allWonProposalsForRanking.forEach(p => {
-            const rep = p.contato?.representante;
-            if (!rep) return;
-            const id = rep.idUsuario;
-
-            // If admin or this specific rep
-            if (authorized === 1 || id === userId) {
-                if (!repMap[id]) {
-                    repMap[id] = { id, name: rep.Nome || "Desconhecido", value: 0, count: 0 };
-                }
-                repMap[id].value += Number(p.Valor || 0);
-                repMap[id].count += 1;
-            }
-        });
-
-        repRanking = Object.values(repMap).sort((a, b) => b.value - a.value).slice(0, 5);
-
+        const repFilter = authorized === 1 ? "" : `AND c.idRepresentante = ${userId}`;
+        const repRows: any[] = await prisma.$queryRawUnsafe(`
+            SELECT TOP 5
+                u.idUsuario,
+                Nome = ISNULL(u.Nome, 'Desconhecido'),
+                totalValor = SUM(ISNULL(p.Valor, 0)),
+                totalCount = COUNT(*)
+            FROM CRM_Proposta p WITH (NOLOCK)
+            LEFT JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato
+            LEFT JOIN CRM_Usuario u WITH (NOLOCK) ON c.idRepresentante = u.idUsuario
+            WHERE p.idStatus IN (5, 9) ${repFilter}
+            GROUP BY u.idUsuario, u.Nome
+            ORDER BY SUM(ISNULL(p.Valor, 0)) DESC
+        `);
+        const repRanking = repRows.map((r: any) => ({
+            id: Number(r.idUsuario),
+            name: r.Nome,
+            value: Number(r.totalValor),
+            count: Number(r.totalCount),
+        }));
 
         // --- 4. BY SEGMENT ---
-        const segmentMap: Record<string, number> = {};
-        wonProposals.forEach(p => {
-            // Note: CRM_Proposta doesn't have Segmento directly, it's on Contact
-            // But we already have wonProposals without include. Let's do a separate query or join.
-        });
-
-        // Better: Query won proposals with contact info
-        const wonWithContact = await prisma.cRM_Proposta.findMany({
-            where: {
-                ...proposalUserFilter,
-                idStatus: { in: [5, 9] }
-            },
-            include: { contato: true }
-        });
-
-        wonWithContact.forEach(p => {
-            const segment = p.contato?.SegmentoAtuacao || "Outros";
-            segmentMap[segment] = (segmentMap[segment] || 0) + Number(p.Valor || 0);
-        });
-
-        const segments = Object.entries(segmentMap)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5);
+        const segFilter = authorized === 1 ? "" : `AND c.idRepresentante = ${userId}`;
+        const segRows: any[] = await prisma.$queryRawUnsafe(`
+            SELECT TOP 5
+                Segmento = ISNULL(NULLIF(c.SegmentoAtuacao, ''), 'Outros'),
+                totalValor = SUM(ISNULL(p.Valor, 0))
+            FROM CRM_Proposta p WITH (NOLOCK)
+            LEFT JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato
+            WHERE p.idStatus IN (5, 9) ${segFilter}
+            GROUP BY c.SegmentoAtuacao
+            ORDER BY SUM(ISNULL(p.Valor, 0)) DESC
+        `);
+        const segments = segRows.map((r: any) => ({
+            name: r.Segmento,
+            value: Number(r.totalValor),
+        }));
 
         // --- 5. PIPELINE BY STATUS ---
         const pipelineByStatusRaw = await prisma.cRM_Proposta.groupBy({

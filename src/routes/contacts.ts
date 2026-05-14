@@ -77,76 +77,61 @@ export const contactsRoutes = new Elysia({ prefix: "/contacts" })
     .get("/", async ({ query }) => {
         const { representatives } = query;
 
-        let where: any = {};
+        const repIds = representatives
+            ? representatives.split(",").map((id: string) => parseInt(id)).filter((id: number) => !isNaN(id) && id > 0)
+            : [];
 
-        if (representatives) {
-            const repIds = representatives.split(",").map(id => parseInt(id)).filter(id => !isNaN(id));
-            if (repIds.length > 0) {
-                where = {
-                    OR: [
-                        { idRepresentante: { in: repIds } },
-                        // In the future, we might need to check adicionales too, 
-                        // but for now let's stick to the primary representative to match VB basic logic
-                    ]
-                };
-            }
+        const whereClause = repIds.length > 0
+            ? `WHERE t1.idRepresentante IN (${repIds.join(",")})`
+            : "";
+
+        try {
+            const rows: any[] = await prisma.$queryRawUnsafe(`
+                SELECT
+                    t1.idContato,
+                    NomContato      = LTRIM(RTRIM(ISNULL(t1.nomContato, ''))),
+                    NomComercial    = LTRIM(RTRIM(ISNULL(NULLIF(t1.nomComercial,''), t1.nomContato))),
+                    CodCliente      = LTRIM(RTRIM(ISNULL(t1.CodCliente, ''))),
+                    CNPJ            = LTRIM(RTRIM(ISNULL(t1.CNPJ, ''))),
+                    Segmento        = LTRIM(RTRIM(ISNULL(t1.Segmento, ''))),
+                    SegmentoAtuacao = LTRIM(RTRIM(ISNULL(t1.SegmentoAtuacao, ''))),
+                    Telefone        = LTRIM(RTRIM(ISNULL(t1.Telefone, ''))),
+                    Email           = LTRIM(RTRIM(ISNULL(t1.email, ''))),
+                    t1.IdStatus,
+                    t1.IdOrigem,
+                    t1.idRepresentante,
+                    Status          = LTRIM(RTRIM(ISNULL(t3.Status, 'N/D'))),
+                    CorStatus       = ISNULL(t3.CorHTML, '#999999'),
+                    Origem          = LTRIM(RTRIM(ISNULL(t4.Origem, 'N/D'))),
+                    CorOrigem       = ISNULL(t4.CorHTML, '#999999'),
+                    Representante   = LTRIM(RTRIM(ISNULL(t5.Nome, 'N/D'))),
+                    RepImagem       = ISNULL(t5.Imagem, ''),
+                    intProposta     = (SELECT COUNT(*) FROM CRM_Proposta WITH (NOLOCK) WHERE idContato = t1.idContato),
+                    proximaAtividade = ISNULL(CONVERT(varchar(16), t7.ProximaAtividade, 120), ''),
+                    dtaCadastro      = ISNULL(CONVERT(varchar(10), t1.dtaCadastro, 23), '')
+                FROM CRM_Contato AS t1 WITH (NOLOCK)
+                LEFT JOIN CRM_Status  AS t3 WITH (NOLOCK) ON t1.IdStatus        = t3.idStatus
+                LEFT JOIN CRM_Origem  AS t4 WITH (NOLOCK) ON t1.IdOrigem        = t4.idOrigem
+                LEFT JOIN CRM_Usuario AS t5 WITH (NOLOCK) ON t1.idRepresentante = t5.idUsuario
+                LEFT JOIN (
+                    SELECT idContato, ProximaAtividade = MIN(DataInicio)
+                    FROM CRM_Agenda WITH (NOLOCK)
+                    WHERE DataInicio >= GETDATE()
+                    GROUP BY idContato
+                ) AS t7 ON t1.idContato = t7.idContato
+                ${whereClause}
+                ORDER BY t1.idContato DESC
+            `);
+
+            return convertBigIntToNumber(rows);
+        } catch (error) {
+            console.error("[contacts] GET / error:", error);
+            return [];
         }
-
-        const now = new Date();
-
-        const contactsList = await prisma.cRM_Contato.findMany({
-            where,
-            include: {
-                status: true,
-                origem: true,
-                representante: {
-                    select: {
-                        idUsuario: true,
-                        Nome: true,
-                        Email: true,
-                    }
-                },
-                representantesAdicionais: {
-                    include: {
-                        representante: {
-                            select: {
-                                Nome: true
-                            }
-                        }
-                    }
-                },
-                _count: {
-                    select: {
-                        propostas: true,
-                        agenda: true // Using agenda as a proxy for interactions
-                    }
-                },
-                agenda: {
-                    where: {
-                        DataInicio: {
-                            gte: now
-                        }
-                    },
-                    orderBy: {
-                        DataInicio: "asc"
-                    },
-                    take: 1
-                }
-            },
-            orderBy: { dtaCadastro: "desc" },
-            take: 200,
-        });
-
-        // Flatten some data for easier consumption in frontend and convert BigInt
-        const result = contactsList.map(c => ({
-            ...c,
-            intProposta: c._count.propostas,
-            interactionCount: c._count.agenda,
-            proximaAtividade: c.agenda[0]?.DataInicio || null,
-            representantesAdicionais: c.representantesAdicionais.map(ra => ra.representante?.Nome).filter(Boolean)
-        }));
-
-        return convertBigIntToNumber(result);
+    }, {
+        query: t.Object({
+            representatives: t.Optional(t.String())
+        })
     })
     .post(
         "/",

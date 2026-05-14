@@ -241,9 +241,9 @@ export const pedidoNfeRoutes = new Elysia({ prefix: "/pedido-nfe" })
         const representantes = await prisma.cRM_Usuario.findMany({
             select: {
                 idUsuario: true,
-                nome: true
+                Nome: true
             },
-            orderBy: { nome: 'asc' },
+            orderBy: { Nome: 'asc' },
             take: 100
         });
         return convertBigIntToNumber(representantes);
