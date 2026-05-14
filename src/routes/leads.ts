@@ -34,9 +34,9 @@ export const leadsRoutes = new Elysia({ prefix: "/leads" })
 
         if (representanteIds.length > 0) {
             const ids = representanteIds.join(",");
-            conditions.push(`(t1.idRepresentante IN (${ids}) OR t7.idRepresentante IN (${ids}))`);
+            conditions.push(`t1.idRepresentante IN (${ids})`);
         } else if (!isAdmin && userId > 0) {
-            conditions.push(`(t1.idRepresentante = ${userId} OR t7.idRepresentante = ${userId})`);
+            conditions.push(`t1.idRepresentante = ${userId}`);
         }
 
         if (statusIds.length > 0) {
@@ -70,8 +70,8 @@ export const leadsRoutes = new Elysia({ prefix: "/leads" })
                 CNPJ            = LTRIM(RTRIM(ISNULL(t1.CNPJ, ''))),
                 Segmento        = LTRIM(RTRIM(ISNULL(t1.Segmento, ''))),
                 SegmentoAtuacao = LTRIM(RTRIM(ISNULL(t1.SegmentoAtuacao, ''))),
-                Cidade          = LTRIM(RTRIM(ISNULL(t1.Cidade, ''))),
-                UF              = LTRIM(RTRIM(ISNULL(t1.UF, ''))),
+                Cidade          = LTRIM(RTRIM(ISNULL(t6.Cidade, ''))),
+                UF              = LTRIM(RTRIM(ISNULL(t6.UF, ''))),
                 Telefone        = LTRIM(RTRIM(ISNULL(t1.Telefone, ''))),
                 Email           = LTRIM(RTRIM(ISNULL(t1.email, ''))),
                 t1.IdStatus,
@@ -91,11 +91,16 @@ export const leadsRoutes = new Elysia({ prefix: "/leads" })
             LEFT JOIN CRM_Origem  AS t4 WITH (NOLOCK) ON t1.IdOrigem        = t4.idOrigem
             LEFT JOIN CRM_Usuario AS t5 WITH (NOLOCK) ON t1.idRepresentante = t5.idUsuario
             LEFT JOIN (
-                SELECT idContato, idRepresentante,
+                SELECT idContato, UF, Cidade
+                FROM CRM_Contato_Endereco WITH (NOLOCK)
+                WHERE flaPrincipal = 1 AND flaAtivo = 1
+            ) AS t6 ON t1.idContato = t6.idContato
+            LEFT JOIN (
+                SELECT idContato,
                        ProximaAtividade = MIN(DataInicio)
                 FROM CRM_Agenda WITH (NOLOCK)
                 WHERE DataInicio >= GETDATE()
-                GROUP BY idContato, idRepresentante
+                GROUP BY idContato
             ) AS t7 ON t1.idContato = t7.idContato
             ${whereClause}
             ORDER BY t1.idContato DESC
