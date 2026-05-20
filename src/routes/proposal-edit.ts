@@ -45,9 +45,12 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t1.idCondicaoPagamento,
                 t1.idOutros,
                 t1.ValorOutros,
+                t1.Valor,
                 t1.idDifal,
                 DataPossivel = CASE WHEN t1.DataPossivel IS NULL THEN '' ELSE FORMAT(t1.DataPossivel, 'yyyy-MM-dd') END,
                 dtaValidade = CASE WHEN t1.dtaValidade IS NULL THEN '' ELSE FORMAT(t1.dtaValidade, 'yyyy-MM-dd') END,
+                dtaCriacao = CASE WHEN t1.dtaCriacao IS NULL THEN '' ELSE FORMAT(t1.dtaCriacao, 'dd/MM/yyyy') END,
+                t1.ObsChecagem,
                 UF = t2.UF,
                 ClienteNome = CASE WHEN t3.nomComercial IS NOT NULL AND t3.nomComercial <> '' THEN t3.nomComercial ELSE t3.nomContato END,
                 Status = t4.Status,
@@ -209,9 +212,9 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     .put("/:id", async ({ params, body }) => {
         const id = Number(params.id);
         const {
-            idDifal, CalculaDifal, Desconto, idFrete, idCondicaoPagamento, Observacao,
+            idDifal, CalculaDifal, Desconto, idFrete, idCondicaoPagamento, Observacao, ObsChecagem,
             Possibilidade, GanhoEstimado, DataPossivel, dtaValidade, Area, ValorM2, FundoPobreza,
-            idOutros, ValorOutros
+            idOutros, ValorOutros, Valor
         } = body as any;
 
         const sets: string[] = [];
@@ -221,6 +224,7 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
         if (idFrete !== undefined) sets.push(`idFrete = ${Number(idFrete)}`);
         if (idCondicaoPagamento !== undefined) sets.push(`idCondicaoPagamento = ${Number(idCondicaoPagamento)}`);
         if (Observacao !== undefined) sets.push(`Observacao = '${String(Observacao).replace(/'/g, "''")}'`);
+        if (ObsChecagem !== undefined) sets.push(`ObsChecagem = '${String(ObsChecagem).replace(/'/g, "''")}'`);
         if (Possibilidade !== undefined) sets.push(`Possibilidade = ${Number(Possibilidade)}`);
         if (GanhoEstimado !== undefined) sets.push(`GanhoEstimado = ${Number(GanhoEstimado)}`);
         if (DataPossivel !== undefined) sets.push(`DataPossivel = '${DataPossivel}'`);
@@ -230,6 +234,7 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
         if (FundoPobreza !== undefined) sets.push(`FundoPobreza = ${Number(FundoPobreza)}`);
         if (idOutros !== undefined) sets.push(`idOutros = ${Number(idOutros)}`);
         if (ValorOutros !== undefined) sets.push(`ValorOutros = ${Number(ValorOutros)}`);
+        if (Valor !== undefined) sets.push(`Valor = ${Number(Valor)}`);
 
         if (!sets.length) return { error: "Nenhum campo para atualizar" };
 
@@ -268,14 +273,70 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     }, {
         body: t.Object({ amostra: t.Optional(t.Number()) })
     })
+    // ── GET composição de um material ────────────────────────────────────────────
+    .get("/composition/:idMaterial", async ({ params }) => {
+        const idMaterial = Number(params.idMaterial);
+
+        // Busca idComposicao vinculado a este material
+        const compLink: any[] = await prisma.$queryRawUnsafe(`
+            SELECT TOP 1 cm.idComposicao, c.nomComposicao, c.PesoEmbalagem, c.PrecoKg, c.ValorEmbalagem
+            FROM CRM_Produto_ComposicaoMaterial cm WITH (NOLOCK)
+            JOIN CRM_Produto_Composicao c WITH (NOLOCK) ON cm.idComposicao = c.idComposicao
+            WHERE cm.idMaterial = ${idMaterial}
+        `);
+
+        if (!compLink.length) return { hasComposition: false };
+
+        const idComposicao = compLink[0].idComposicao;
+
+        // Busca todos os materiais que compõem essa composição
+        const materiais: any[] = await prisma.$queryRawUnsafe(`
+            SELECT cm.idMaterial, m.nomMaterial, m.CodMaterial, m.PesoEmbalagem, m.PrecoKg, m.ValorEmbalagem, m.IPI
+            FROM CRM_Produto_ComposicaoMaterial cm WITH (NOLOCK)
+            JOIN CRM_Produto_Material m WITH (NOLOCK) ON cm.idMaterial = m.idMaterial
+            WHERE cm.idComposicao = ${idComposicao}
+            ORDER BY cm.id
+        `);
+
+        return convertBigIntToNumber({
+            hasComposition: true,
+            idComposicao,
+            nomComposicao: compLink[0].nomComposicao,
+            materiais,
+        });
+    })
+
     .post("/:id/items", async ({ params, body }) => {
         const id = Number(params.id);
-        const { idMaterial, Quantidade, Desconto, MaterialDescricao } = body as any;
+        const { idMaterial, Quantidade, Desconto, MaterialDescricao, composicao } = body as any;
 
-        await prisma.$queryRawUnsafe(`
-            INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-            VALUES (${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${String(MaterialDescricao || '').replace(/'/g, "''")}', 0, 0, 0, 0, 0, 0)
-        `);
+        if (composicao && composicao.idComposicao) {
+            // Produto com composição: insere 1 pai (idMaterial=0) + N filhos
+            const idComposicao = Number(composicao.idComposicao);
+            const desc = String(MaterialDescricao || '').replace(/'/g, "''");
+
+            // Registro pai
+            await prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
+                VALUES (${id}, 0, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${desc}', 0, ${idComposicao}, 0, 0, 0, 0, 0)
+            `);
+
+            // Registros filhos (cada material da composição)
+            for (const mat of composicao.materiais) {
+                const matDesc = String(mat.nomMaterial || '').replace(/'/g, "''");
+                await prisma.$queryRawUnsafe(`
+                    INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
+                    VALUES (${id}, ${Number(mat.idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${matDesc}', 0, 0, ${idComposicao}, 0, 0, 0, 0)
+                `);
+            }
+        } else {
+            // Produto simples
+            await prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
+                VALUES (${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${String(MaterialDescricao || '').replace(/'/g, "''")}', 0, 0, 0, 0, 0, 0, 0)
+            `);
+        }
+
         return { success: true };
     })
     .delete("/:id/items/:itemId", async ({ params }) => {
