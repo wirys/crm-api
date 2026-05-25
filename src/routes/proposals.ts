@@ -22,28 +22,27 @@ export const proposalsRoutes = new Elysia({ prefix: "/proposals" })
     .get("/contact/:id", async ({ params }) => {
         const contactId = parseInt(params.id);
 
-        const proposals = await prisma.cRM_Proposta.findMany({
-            where: { idContato: contactId },
-            orderBy: { dtaCriacao: "desc" },
-        });
+        const rows: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                p.idProposta,
+                p.PropostaNo,
+                UF            = ISNULL(d.UF, ''),
+                p.CalculaDifal,
+                p.Desconto,
+                p.TotalKg,
+                p.TotalValor,
+                p.idStatus,
+                Status        = ISNULL(s.Status, 'N/D'),
+                CorHTML       = ISNULL(s.CorHTML, '#999999'),
+                dtaCriacao    = CASE WHEN p.dtaCriacao IS NULL THEN '' ELSE FORMAT(p.dtaCriacao, 'dd/MM/yyyy') END
+            FROM CRM_Proposta AS p WITH (NOLOCK)
+            LEFT JOIN CRM_Proposta_Difal   AS d WITH (NOLOCK) ON p.idDifal   = d.idDifal
+            LEFT JOIN CRM_Proposta_Status  AS s WITH (NOLOCK) ON p.idStatus  = s.idStatus
+            WHERE p.idContato = ${contactId}
+            ORDER BY p.dtaCriacao DESC
+        `);
 
-        // The legacy code showed specific status colors.
-        // We might want to include the status name in the return
-        const statusMap: Record<number, string> = {
-            1: "Pendente",
-            2: "Em Análise",
-            3: "Aprovado",
-            4: "Concluído",
-            5: "Faturado",
-            6: "Reprovado"
-        };
-
-        const result = proposals.map(p => ({
-            ...p,
-            Status: statusMap[p.idStatus || 1] || "Desconhecido"
-        }));
-
-        return convertBigIntToNumber(result);
+        return convertBigIntToNumber(rows);
     })
     .get("/contact-info/:id", async ({ params }) => {
         const contactId = parseInt(params.id);

@@ -115,20 +115,22 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t1.idPropostaDetalhe,
                 t1.idProposta,
                 t1.idMaterial,
+                t1.idComposicao,
+                t1.idComposicaoDetalhe,
                 t1.Quantidade,
                 t1.Desconto,
                 t1.MaterialDescricao,
-                t2.nomMaterial,
-                t2.CodMaterial,
+                nomMaterial     = ISNULL(t2.nomMaterial, t1.MaterialDescricao),
+                CodMaterial     = ISNULL(t2.CodMaterial, ''),
                 t2.NCM,
-                t2.PesoEmbalagem,
-                t2.PrecoKg,
-                ValorEmbalagem = ISNULL(t2.ValorEmbalagem, ISNULL(t2.PrecoKg, 0) * ISNULL(t2.PesoEmbalagem, 0)),
-                t2.IPI
+                PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
+                PrecoKg         = ISNULL(t2.PrecoKg, 0),
+                ValorEmbalagem  = ISNULL(t2.ValorEmbalagem, ISNULL(t2.PrecoKg, 0) * ISNULL(t2.PesoEmbalagem, 0)),
+                IPI             = ISNULL(t2.IPI, 0)
             FROM CRM_Proposta_Detalhe AS t1
-            LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial
+            LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0
             WHERE t1.idProposta = ${id}
-            ORDER BY t1.idPropostaDetalhe
+            ORDER BY t1.idComposicao, t1.idComposicaoDetalhe, t1.idPropostaDetalhe
         `);
         return convertBigIntToNumber(results);
     })
@@ -138,9 +140,9 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
         const prop: any[] = await prisma.$queryRawUnsafe(
             `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
         );
-        if (!prop.length) return { error: "Proposta não encontrada" };
+        if (!prop.length) return [];
         const propostaNo = prop[0].PropostaNo;
-        if (!propostaNo) return { error: "Proposta sem número" };
+        if (!propostaNo) return [];
 
         const results: any[] = await prisma.$queryRawUnsafe(
             `EXEC sp_CRMPropostaDetalhe @PropostaNo = '${propostaNo}'`
@@ -341,6 +343,16 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     })
     .delete("/:id/items/:itemId", async ({ params }) => {
         const itemId = Number(params.itemId);
+        // Verifica se o item é pai de composição (idMaterial=0, idComposicao>0)
+        const row: any[] = await prisma.$queryRawUnsafe(
+            `SELECT idMaterial, idComposicao FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
+        );
+        if (row.length && Number(row[0].idMaterial) === 0 && Number(row[0].idComposicao) > 0) {
+            // Apaga filhos primeiro
+            await prisma.$queryRawUnsafe(
+                `DELETE FROM CRM_Proposta_Detalhe WHERE idComposicaoDetalhe = ${Number(row[0].idComposicao)} AND idProposta = ${Number(params.id)}`
+            );
+        }
         await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
         return { success: true };
     });
