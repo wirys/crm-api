@@ -246,6 +246,56 @@ export const expedicaoRoutes = new Elysia({ prefix: "/expedicao" })
         }
     }, { params: t.Object({ rastreioId: t.String() }) })
 
+    // ── GET /expedicao/:id/arquivos ───────────────────────────────────────────
+    .get("/:id/arquivos", async ({ params }) => {
+        const id = Number(params.id);
+        const rows: any[] = await prisma.$queryRawUnsafe(`
+            SELECT id, idProposta,
+                ArquivoNome    = ISNULL(ArquivoNome, ''),
+                ArquivoTipo    = ISNULL(ArquivoTipo, ''),
+                CaminhoArquivo = ISNULL(CaminhoArquivo, ''),
+                dtaCriacao     = ISNULL(CONVERT(varchar(16), dtaCriacao, 120), '')
+            FROM CRM_ExpedicaoArquivo WITH (NOLOCK)
+            WHERE idProposta = ${id}
+            ORDER BY dtaCriacao DESC
+        `);
+        return conv(rows);
+    }, { params: t.Object({ id: t.String() }) })
+
+    // ── POST /expedicao/:id/arquivo ───────────────────────────────────────────
+    .post("/:id/arquivo", async ({ params, body, set }) => {
+        const id       = Number(params.id);
+        const { ArquivoNome, ArquivoTipo, CaminhoArquivo, idUsuario } = body as any;
+        const nome     = String(ArquivoNome    ?? "").replace(/'/g, "''");
+        const tipo     = String(ArquivoTipo    ?? "").replace(/'/g, "''");
+        const caminho  = String(CaminhoArquivo ?? "").replace(/'/g, "''");
+        const uid      = Number(idUsuario ?? 0);
+        try {
+            await prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_ExpedicaoArquivo (idProposta, ArquivoNome, ArquivoTipo, CaminhoArquivo, dtaCriacao, idUsuario)
+                VALUES (${id}, '${nome}', '${tipo}', '${caminho}', GETDATE(), ${uid || "NULL"})
+            `);
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao salvar arquivo" };
+        }
+    }, { params: t.Object({ id: t.String() }) })
+
+    // ── DELETE /expedicao/arquivo/:arquivoId ──────────────────────────────────
+    .delete("/arquivo/:arquivoId", async ({ params, set }) => {
+        const aid = Number(params.arquivoId);
+        try {
+            await prisma.$queryRawUnsafe(`DELETE FROM CRM_ExpedicaoArquivo WHERE id = ${aid}`);
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao remover arquivo" };
+        }
+    }, { params: t.Object({ arquivoId: t.String() }) })
+
     // ── GET /expedicao/:id/updates ────────────────────────────────────────────
     .get("/:id/updates", async ({ params }) => {
         const id = Number(params.id);
