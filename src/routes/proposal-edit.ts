@@ -110,6 +110,13 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     })
     .get("/:id/items", async ({ params }) => {
         const id = Number(params.id);
+
+        // Fetch PropostaNo to use with sp_CRMTabelaPrecoIndividual
+        const propRow: any[] = await prisma.$queryRawUnsafe(
+            `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
+        );
+        const propostaNo: string = propRow[0]?.PropostaNo || "";
+
         const results: any[] = await prisma.$queryRawUnsafe(`
             SELECT
                 t1.idPropostaDetalhe,
@@ -128,15 +135,7 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t2.NCM,
                 PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
                 PrecoKg         = ISNULL(t2.PrecoKg, 0),
-                ValorEmbalagem  = ISNULL(
-                    NULLIF(t2.ValorEmbalagem, 0),
-                    CASE
-                        WHEN ROUND(ISNULL(t2.IPI, 0), 0) = 18 THEN ISNULL(CAST(t2.PrecoKg18 AS FLOAT), ISNULL(t2.PrecoKg, 0))
-                        WHEN ROUND(ISNULL(t2.IPI, 0), 0) = 12 THEN ISNULL(CAST(t2.PrecoKg12 AS FLOAT), ISNULL(t2.PrecoKg, 0))
-                        WHEN ROUND(ISNULL(t2.IPI, 0), 0) = 7  THEN ISNULL(CAST(t2.PrecoKg07 AS FLOAT), ISNULL(t2.PrecoKg, 0))
-                        ELSE ISNULL(t2.PrecoKg, 0)
-                    END * ISNULL(t2.PesoEmbalagem, 0)
-                ),
+                ValorEmbalagem  = 0,
                 IPI             = ISNULL(t2.IPI, 0)
             FROM CRM_Proposta_Detalhe AS t1
             LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0
@@ -144,7 +143,47 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
             WHERE t1.idProposta = ${id}
             ORDER BY ISNULL(e.Ordem, 9999), t1.idComposicao, t1.idComposicaoDetalhe, t1.idPropostaDetalhe
         `);
-        return convertBigIntToNumber(results);
+
+        const converted = convertBigIntToNumber(results);
+
+        // Enrich with real prices from sp_CRMTabelaPrecoIndividual when PropostaNo exists
+        if (propostaNo) {
+            const uniqueMaterials = [...new Set(
+                converted.filter((r: any) => Number(r.idMaterial) > 0).map((r: any) => Number(r.idMaterial))
+            )] as number[];
+
+            if (uniqueMaterials.length > 0) {
+                // Fetch prices in parallel
+                const priceResults = await Promise.allSettled(
+                    uniqueMaterials.map(idMat =>
+                        prisma.$queryRawUnsafe(
+                            `EXEC sp_CRMTabelaPrecoIndividual @PropostaNo = '${propostaNo}', @idMaterial = ${idMat}`
+                        ).then((r: any) => ({ idMaterial: idMat, price: r[0] || null }))
+                    )
+                );
+
+                const priceMap: Record<number, any> = {};
+                for (const res of priceResults) {
+                    if (res.status === "fulfilled" && res.value.price) {
+                        priceMap[res.value.idMaterial] = convertBigIntToNumber(res.value.price);
+                    }
+                }
+
+                // Apply prices to items
+                for (const row of converted) {
+                    const idMat = Number(row.idMaterial);
+                    if (idMat > 0 && priceMap[idMat]) {
+                        const p = priceMap[idMat];
+                        row.ValorEmbalagem = Number(p.ValorEmbalagem ?? p.Valor ?? 0);
+                        row.PrecoKg        = Number(p.PrecoKg ?? row.PrecoKg ?? 0);
+                        row.PesoEmbalagem  = Number(p.PesoEmbalagem ?? row.PesoEmbalagem ?? 0);
+                        row.IPI            = Number(p.IPI ?? row.IPI ?? 0);
+                    }
+                }
+            }
+        }
+
+        return converted;
     })
     .get("/:id/totals", async ({ params }) => {
         const id = Number(params.id);
