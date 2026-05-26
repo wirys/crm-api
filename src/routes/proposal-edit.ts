@@ -340,18 +340,40 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     })
     .put("/:id/generate-code", async ({ params, body }) => {
         const id = Number(params.id);
-        const { amostra } = body as any;
+        const {
+            amostra,
+            // Valores atuais do formulário — elimina race condition do debounce
+            Desconto, idDifal, FundoPobreza, CalculaDifal,
+            Possibilidade, GanhoEstimado, DataPossivel, dtaValidade,
+            idCondicaoPagamento, idFrete,
+        } = body as any;
         const amostraFlag = Number(amostra || 0);
 
-        // Lê todos os campos necessários — mesmo fluxo do VBA antigo
+        // ── 1. Força UPDATE com valores mais recentes do form (igual ao VBA) ──
+        // Garante que o banco tem os dados corretos antes de chamar a SP,
+        // mesmo que o debounce de 800ms ainda não tenha disparado.
+        const preUpdateSets: string[] = [];
+        if (Desconto          !== undefined) preUpdateSets.push(`Desconto = ${Number(Desconto)}`);
+        if (idDifal           !== undefined) preUpdateSets.push(`idDifal = ${Number(idDifal)}`);
+        if (FundoPobreza      !== undefined) preUpdateSets.push(`FundoPobreza = ${Number(FundoPobreza)}`);
+        if (CalculaDifal      !== undefined) preUpdateSets.push(`CalculaDifal = ${Number(CalculaDifal)}`);
+        if (Possibilidade     !== undefined) preUpdateSets.push(`Possibilidade = ${Number(Possibilidade)}`);
+        if (GanhoEstimado     !== undefined) preUpdateSets.push(`GanhoEstimado = ${Number(GanhoEstimado)}`);
+        if (DataPossivel      !== undefined && DataPossivel !== "") preUpdateSets.push(`DataPossivel = '${DataPossivel}'`);
+        if (dtaValidade       !== undefined && dtaValidade !== "") preUpdateSets.push(`dtaValidade = '${dtaValidade}'`);
+        if (idCondicaoPagamento !== undefined) preUpdateSets.push(`idCondicaoPagamento = ${Number(idCondicaoPagamento)}`);
+        if (idFrete           !== undefined) preUpdateSets.push(`idFrete = ${Number(idFrete)}`);
+
+        if (preUpdateSets.length > 0) {
+            await prisma.$queryRawUnsafe(
+                `UPDATE CRM_Proposta SET ${preUpdateSets.join(", ")} WHERE idProposta = ${id}`
+            );
+        }
+
+        // ── 2. Lê imposto e desconto do banco (já atualizado) ─────────────────
         const prop: any[] = await prisma.$queryRawUnsafe(`
             SELECT
                 p.Desconto,
-                p.idDifal,
-                p.FundoPobreza,
-                p.CalculaDifal,
-                p.Possibilidade,
-                p.GanhoEstimado,
                 p.DataPossivel,
                 imposto = ISNULL(d.AliqEst * 100, 0)
             FROM CRM_Proposta p
@@ -360,47 +382,63 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
         `);
         if (!prop.length) return { error: "Proposta não encontrada" };
 
-        const row       = prop[0];
-        // Desconto no DB é decimal (0.05 = 5%). SP espera inteiro (5)
+        const row         = prop[0];
         const descontoPct = Math.round(Number(row.Desconto || 0) * 100);
-        // AliqEst no DB é decimal (0.12 = 12%). SP espera string "12"
-        const imposto   = Number(row.imposto || 0);
+        const imposto     = Number(row.imposto || 0);
 
-        // Chama SP — ela RETORNA o código gerado (não salva no DB por si só)
-        const spResult: any[] = await prisma.$queryRawUnsafe(
-            `EXEC sp_CRMGeraNoProposta @idProposta = ${id}, @Desconto = ${descontoPct}, @Imposto = '${imposto}', @Amostra = ${amostraFlag}`
-        );
-
-        // Extrai o código — SP pode retornar coluna com qualquer nome ou sem nome
-        let propostaNo: string | null = null;
-        if (spResult.length > 0) {
+        // ── 3. Chama SP com até 3 tentativas ─────────────────────────────────
+        const extractCode = (spResult: any[]): string | null => {
+            if (!spResult.length) return null;
             const r = convertBigIntToNumber(spResult[0]);
-            // Tenta nomes conhecidos; fallback para o primeiro valor da linha
-            propostaNo = r.PropostaNo ?? r.propostano ?? r.Codigo ?? r.codigo ?? (Object.values(r)[0] as string) ?? null;
+            const val = r.PropostaNo ?? r.propostano ?? r.Codigo ?? r.codigo
+                ?? (Object.values(r)[0] as any);
+            const s = String(val ?? "").trim();
+            return s && s !== "null" && s !== "undefined" ? s : null;
+        };
+
+        let propostaNo: string | null = null;
+        let lastError: any = null;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const spResult: any[] = await prisma.$queryRawUnsafe(
+                    `EXEC sp_CRMGeraNoProposta @idProposta = ${id}, @Desconto = ${descontoPct}, @Imposto = '${imposto}', @Amostra = ${amostraFlag}`
+                );
+                propostaNo = extractCode(spResult);
+                if (propostaNo) break;
+            } catch (e) {
+                lastError = e;
+                console.error(`[generate-code] tentativa ${attempt} falhou:`, e);
+                if (attempt < 3) await new Promise(r => setTimeout(r, 300 * attempt));
+            }
         }
 
-        // Se SP não retornou nada, tenta SELECT no DB (caso SP faça UPDATE internamente)
+        // ── 4. Fallback: SELECT direto (caso SP tenha atualizado internamente) ─
         if (!propostaNo) {
             const sel: any[] = await prisma.$queryRawUnsafe(
                 `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
             );
-            propostaNo = sel[0]?.PropostaNo ?? null;
+            const existing = sel[0]?.PropostaNo ? String(sel[0].PropostaNo).trim() : null;
+            if (existing && existing !== "") propostaNo = existing;
         }
 
-        if (!propostaNo) return { error: "Falha ao gerar código — SP não retornou valor" };
+        if (!propostaNo) {
+            console.error(`[generate-code] todas as tentativas falharam para idProposta=${id}`, lastError);
+            return { error: "Não foi possível gerar o código. Tente novamente." };
+        }
 
-        // Salva PropostaNo na proposta (replica o segundo UPDATE do VBA)
+        // ── 5. Persiste PropostaNo (replica 2º UPDATE do VBA) ────────────────
         await prisma.$queryRawUnsafe(
             `UPDATE CRM_Proposta SET PropostaNo = '${String(propostaNo).replace(/'/g, "''")}' WHERE idProposta = ${id}`
         );
 
-        // Se for amostra, chama procedure adicional (igual ao VBA)
+        // SP auxiliar para amostras
         if (amostraFlag === 1 && row.DataPossivel) {
             try {
                 await prisma.$queryRawUnsafe(
                     `EXEC CRM_AMOContatoUpdate @idProposta = ${id}, @dta = '${row.DataPossivel}', @idUsuario = 0`
                 );
-            } catch { /* ignora erro de SP auxiliar */ }
+            } catch { /* não bloqueia o fluxo principal */ }
         }
 
         return { PropostaNo: propostaNo };
