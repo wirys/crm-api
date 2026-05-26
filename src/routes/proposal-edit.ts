@@ -321,15 +321,37 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
         const descontoPct = Math.round(Number(Desconto || 0) * 100);
         const amostraFlag = Number(amostra || 0);
 
-        const results: any[] = await prisma.$queryRawUnsafe(
+        await prisma.$queryRawUnsafe(
             `EXEC sp_CRMGeraNoProposta @idProposta = ${id}, @Desconto = ${descontoPct}, @Imposto = '${imposto}', @Amostra = ${amostraFlag}`
         );
-        if (results.length) {
-            return { PropostaNo: results[0].PropostaNo };
+        // SP may not return rows in all drivers — fetch fresh value after execution
+        const updated: any[] = await prisma.$queryRawUnsafe(
+            `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
+        );
+        if (updated.length && updated[0].PropostaNo) {
+            return { PropostaNo: updated[0].PropostaNo };
         }
         return { error: "Falha ao gerar código" };
     }, {
         body: t.Object({ amostra: t.Optional(t.Number()) })
+    })
+    // ── POST /condicoes-pagamento  — cadastrar nova condição ──────────────────
+    .post("/condicoes-pagamento", async ({ body, set }) => {
+        const { Titulo } = body as any;
+        const titulo = String(Titulo || '').trim().replace(/'/g, "''");
+        if (!titulo) { set.status = 400; return { error: "Informe o título" }; }
+        try {
+            const result: any[] = await prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_Proposta_CondicaoPagamento (Titulo, flaAtivo)
+                OUTPUT INSERTED.idCondicaoPagamento
+                VALUES ('${titulo}', 1)
+            `);
+            return convertBigIntToNumber(result[0]);
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao criar condição de pagamento" };
+        }
     })
     // ── GET composição de um material ────────────────────────────────────────────
     .get("/composition/:idMaterial", async ({ params }) => {
