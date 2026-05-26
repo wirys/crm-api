@@ -128,7 +128,15 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t2.NCM,
                 PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
                 PrecoKg         = ISNULL(t2.PrecoKg, 0),
-                ValorEmbalagem  = ISNULL(t2.ValorEmbalagem, ISNULL(t2.PrecoKg, 0) * ISNULL(t2.PesoEmbalagem, 0)),
+                ValorEmbalagem  = ISNULL(
+                    NULLIF(t2.ValorEmbalagem, 0),
+                    CASE
+                        WHEN ROUND(ISNULL(t2.IPI, 0), 0) = 18 THEN ISNULL(CAST(t2.PrecoKg18 AS FLOAT), ISNULL(t2.PrecoKg, 0))
+                        WHEN ROUND(ISNULL(t2.IPI, 0), 0) = 12 THEN ISNULL(CAST(t2.PrecoKg12 AS FLOAT), ISNULL(t2.PrecoKg, 0))
+                        WHEN ROUND(ISNULL(t2.IPI, 0), 0) = 7  THEN ISNULL(CAST(t2.PrecoKg07 AS FLOAT), ISNULL(t2.PrecoKg, 0))
+                        ELSE ISNULL(t2.PrecoKg, 0)
+                    END * ISNULL(t2.PesoEmbalagem, 0)
+                ),
                 IPI             = ISNULL(t2.IPI, 0)
             FROM CRM_Proposta_Detalhe AS t1
             LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0
