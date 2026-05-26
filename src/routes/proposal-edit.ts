@@ -341,36 +341,69 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     .put("/:id/generate-code", async ({ params, body }) => {
         const id = Number(params.id);
         const { amostra } = body as any;
-        const prop: any[] = await prisma.$queryRawUnsafe(
-            `SELECT Desconto, idDifal FROM CRM_Proposta WHERE idProposta = ${id}`
-        );
-        if (!prop.length) return { error: "Proposta não encontrada" };
-        const { Desconto, idDifal } = prop[0];
-
-        let imposto = 0;
-        if (idDifal) {
-            const difal: any[] = await prisma.$queryRawUnsafe(
-                `SELECT AliqEst FROM CRM_Proposta_Difal WHERE idDifal = ${Number(idDifal)}`
-            );
-            if (difal.length && difal[0].AliqEst) {
-                imposto = Number(difal[0].AliqEst) * 100;
-            }
-        }
-
-        const descontoPct = Math.round(Number(Desconto || 0) * 100);
         const amostraFlag = Number(amostra || 0);
 
-        await prisma.$queryRawUnsafe(
+        // Lê todos os campos necessários — mesmo fluxo do VBA antigo
+        const prop: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                p.Desconto,
+                p.idDifal,
+                p.FundoPobreza,
+                p.CalculaDifal,
+                p.Possibilidade,
+                p.GanhoEstimado,
+                p.DataPossivel,
+                imposto = ISNULL(d.AliqEst * 100, 0)
+            FROM CRM_Proposta p
+            LEFT JOIN CRM_Proposta_Difal d ON p.idDifal = d.idDifal
+            WHERE p.idProposta = ${id}
+        `);
+        if (!prop.length) return { error: "Proposta não encontrada" };
+
+        const row       = prop[0];
+        // Desconto no DB é decimal (0.05 = 5%). SP espera inteiro (5)
+        const descontoPct = Math.round(Number(row.Desconto || 0) * 100);
+        // AliqEst no DB é decimal (0.12 = 12%). SP espera string "12"
+        const imposto   = Number(row.imposto || 0);
+
+        // Chama SP — ela RETORNA o código gerado (não salva no DB por si só)
+        const spResult: any[] = await prisma.$queryRawUnsafe(
             `EXEC sp_CRMGeraNoProposta @idProposta = ${id}, @Desconto = ${descontoPct}, @Imposto = '${imposto}', @Amostra = ${amostraFlag}`
         );
-        // SP may not return rows in all drivers — fetch fresh value after execution
-        const updated: any[] = await prisma.$queryRawUnsafe(
-            `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
-        );
-        if (updated.length && updated[0].PropostaNo) {
-            return { PropostaNo: updated[0].PropostaNo };
+
+        // Extrai o código — SP pode retornar coluna com qualquer nome ou sem nome
+        let propostaNo: string | null = null;
+        if (spResult.length > 0) {
+            const r = convertBigIntToNumber(spResult[0]);
+            // Tenta nomes conhecidos; fallback para o primeiro valor da linha
+            propostaNo = r.PropostaNo ?? r.propostano ?? r.Codigo ?? r.codigo ?? (Object.values(r)[0] as string) ?? null;
         }
-        return { error: "Falha ao gerar código" };
+
+        // Se SP não retornou nada, tenta SELECT no DB (caso SP faça UPDATE internamente)
+        if (!propostaNo) {
+            const sel: any[] = await prisma.$queryRawUnsafe(
+                `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
+            );
+            propostaNo = sel[0]?.PropostaNo ?? null;
+        }
+
+        if (!propostaNo) return { error: "Falha ao gerar código — SP não retornou valor" };
+
+        // Salva PropostaNo na proposta (replica o segundo UPDATE do VBA)
+        await prisma.$queryRawUnsafe(
+            `UPDATE CRM_Proposta SET PropostaNo = '${String(propostaNo).replace(/'/g, "''")}' WHERE idProposta = ${id}`
+        );
+
+        // Se for amostra, chama procedure adicional (igual ao VBA)
+        if (amostraFlag === 1 && row.DataPossivel) {
+            try {
+                await prisma.$queryRawUnsafe(
+                    `EXEC CRM_AMOContatoUpdate @idProposta = ${id}, @dta = '${row.DataPossivel}', @idUsuario = 0`
+                );
+            } catch { /* ignora erro de SP auxiliar */ }
+        }
+
+        return { PropostaNo: propostaNo };
     }, {
         body: t.Object({ amostra: t.Optional(t.Number()) })
     })
