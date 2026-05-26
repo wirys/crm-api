@@ -117,6 +117,9 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t1.idMaterial,
                 t1.idComposicao,
                 t1.idComposicaoDetalhe,
+                t1.idEtapa,
+                nomEtapa        = ISNULL(e.Etapa, ''),
+                OrdemEtapa      = ISNULL(e.Ordem, 0),
                 t1.Quantidade,
                 t1.Desconto,
                 t1.MaterialDescricao,
@@ -129,8 +132,9 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 IPI             = ISNULL(t2.IPI, 0)
             FROM CRM_Proposta_Detalhe AS t1
             LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0
+            LEFT OUTER JOIN CRM_Proposta_Etapa AS e ON t1.idEtapa = e.idEtapa
             WHERE t1.idProposta = ${id}
-            ORDER BY t1.idComposicao, t1.idComposicaoDetalhe, t1.idPropostaDetalhe
+            ORDER BY ISNULL(e.Ordem, 9999), t1.idComposicao, t1.idComposicaoDetalhe, t1.idPropostaDetalhe
         `);
         return convertBigIntToNumber(results);
     })
@@ -232,6 +236,29 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
         `);
         return convertBigIntToNumber(results);
     })
+    .post("/etapas/:idProposta", async ({ params, body, set }) => {
+        const id = Number(params.idProposta);
+        const { Etapa, Descricao, Ordem } = body as any;
+        const etapaName = String(Etapa || '').replace(/'/g, "''");
+        const desc = String(Descricao || '').replace(/'/g, "''");
+        const ordem = Number(Ordem || 0);
+        try {
+            const result: any[] = await prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_Proposta_Etapa (idProposta, Etapa, Descricao, Ordem, dtaCadastro)
+                OUTPUT INSERTED.idEtapa
+                VALUES (${id}, '${etapaName}', '${desc}', ${ordem}, GETDATE())
+            `);
+            return convertBigIntToNumber(result[0]);
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao criar etapa" };
+        }
+    }, { params: t.Object({ idProposta: t.String() }) })
+    .delete("/etapas/:idEtapa", async ({ params }) => {
+        await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Etapa WHERE idEtapa = ${Number(params.idEtapa)}`);
+        return { success: true };
+    }, { params: t.Object({ idEtapa: t.String() }) })
     .put("/:id", async ({ params, body }) => {
         const id = Number(params.id);
         const {
@@ -331,7 +358,7 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
 
     .post("/:id/items", async ({ params, body }) => {
         const id = Number(params.id);
-        const { idMaterial, Quantidade, Desconto, MaterialDescricao, composicao } = body as any;
+        const { idMaterial, Quantidade, Desconto, MaterialDescricao, composicao, idEtapa } = body as any;
 
         if (composicao && composicao.idComposicao) {
             // Produto com composição: insere 1 pai (idMaterial=0) + N filhos
@@ -341,7 +368,7 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
             // Registro pai
             await prisma.$queryRawUnsafe(`
                 INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-                VALUES (${id}, 0, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${desc}', 0, ${idComposicao}, 0, 0, 0, 0, 0)
+                VALUES (${id}, 0, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${desc}', ${Number(idEtapa || 0)}, ${idComposicao}, 0, 0, 0, 0, 0)
             `);
 
             // Registros filhos (cada material da composição)
@@ -349,14 +376,14 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 const matDesc = String(mat.nomMaterial || '').replace(/'/g, "''");
                 await prisma.$queryRawUnsafe(`
                     INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-                    VALUES (${id}, ${Number(mat.idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${matDesc}', 0, 0, ${idComposicao}, 0, 0, 0, 0)
+                    VALUES (${id}, ${Number(mat.idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${matDesc}', ${Number(idEtapa || 0)}, 0, ${idComposicao}, 0, 0, 0, 0)
                 `);
             }
         } else {
             // Produto simples
             await prisma.$queryRawUnsafe(`
                 INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-                VALUES (${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${String(MaterialDescricao || '').replace(/'/g, "''")}', 0, 0, 0, 0, 0, 0, 0)
+                VALUES (${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${String(MaterialDescricao || '').replace(/'/g, "''")}', ${Number(idEtapa || 0)}, 0, 0, 0, 0, 0, 0)
             `);
         }
 
@@ -366,12 +393,13 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
     .patch("/:id/items/:itemId", async ({ params, body, set }) => {
         const itemId   = Number(params.itemId);
         const propId   = Number(params.id);
-        const { Quantidade, Desconto, ValorEmbalagem } = body as any;
+        const { Quantidade, Desconto, ValorEmbalagem, idEtapa } = body as any;
 
         const sets: string[] = [];
         if (Quantidade    !== undefined) sets.push(`Quantidade    = ${Number(Quantidade)}`);
         if (Desconto      !== undefined) sets.push(`Desconto      = ${Number(Desconto)}`);
         if (ValorEmbalagem !== undefined) sets.push(`ValorEmbalagem = ${Number(ValorEmbalagem)}`);
+        if (idEtapa !== undefined) sets.push(`idEtapa = ${Number(idEtapa)}`);
 
         if (sets.length === 0) { set.status = 400; return { error: "Nenhum campo enviado" }; }
 
