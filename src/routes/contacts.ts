@@ -133,6 +133,109 @@ export const contactsRoutes = new Elysia({ prefix: "/contacts" })
             representatives: t.Optional(t.String())
         })
     })
+    .get("/:id", async ({ params, set }) => {
+        try {
+            const contactId = parseInt(params.id);
+            const contact = await prisma.cRM_Contato.findUnique({
+                where: { idContato: contactId },
+            });
+            if (!contact) {
+                set.status = 404;
+                return { message: "Contato não encontrado." };
+            }
+            const address = await prisma.cRM_Contato_Endereco.findFirst({
+                where: { idContato: contactId, flaPrincipal: true },
+            });
+            return convertBigIntToNumber({ contact, address: address ?? {} });
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { message: "Erro ao buscar contato." };
+        }
+    }, {
+        params: t.Object({ id: t.String() })
+    })
+    .put(
+        "/:id",
+        async ({ params, body, set }) => {
+            try {
+                const contactId = parseInt(params.id);
+                const { contact, address } = body;
+
+                await prisma.cRM_Contato.update({
+                    where: { idContato: contactId },
+                    data: {
+                        ...contact,
+                        idBotConversa: contact.idBotConversa ? parseInt(contact.idBotConversa) : undefined,
+                        dtaAbertura: contact.dtaAbertura ? new Date(contact.dtaAbertura) : undefined,
+                        flaAtivo: contact.flaAtivo === "1",
+                    },
+                });
+
+                if (address && Object.keys(address).length > 0) {
+                    const existing = await prisma.cRM_Contato_Endereco.findFirst({
+                        where: { idContato: contactId, flaPrincipal: true },
+                    });
+                    if (existing) {
+                        await prisma.cRM_Contato_Endereco.update({
+                            where: { idContatoEndereco: existing.idContatoEndereco },
+                            data: address,
+                        });
+                    } else {
+                        await prisma.cRM_Contato_Endereco.create({
+                            data: {
+                                ...address,
+                                idContato: contactId,
+                                flaPrincipal: true,
+                                flaAtivo: true,
+                                dtaCadastro: new Date(),
+                            },
+                        });
+                    }
+                }
+
+                return { message: "Contato atualizado com sucesso!" };
+            } catch (e) {
+                console.error(e);
+                set.status = 500;
+                return { message: "Erro ao atualizar contato." };
+            }
+        },
+        {
+            params: t.Object({ id: t.String() }),
+            body: t.Object({
+                contact: t.Object({
+                    nomContato: t.Optional(t.String()),
+                    nomComercial: t.Optional(t.String()),
+                    TipoPessoa: t.String(),
+                    CNPJ: t.Optional(t.String()),
+                    CPF: t.Optional(t.String()),
+                    idRepresentante: t.Optional(t.Number()),
+                    IdOrigem: t.Optional(t.Number()),
+                    SegmentoAtuacao: t.Optional(t.String()),
+                    Telefone: t.Optional(t.String()),
+                    TelefoneWS: t.Optional(t.String()),
+                    email: t.Optional(t.String()),
+                    idBotConversa: t.Optional(t.String()),
+                    flaAtivo: t.String(),
+                    dtaAbertura: t.Optional(t.String()),
+                    Situacao: t.Optional(t.String()),
+                    Porte: t.Optional(t.String()),
+                    NaturezaJuridica: t.Optional(t.String()),
+                    AtividadePrincipal: t.Optional(t.String()),
+                }),
+                address: t.Object({
+                    CEP: t.Optional(t.String()),
+                    UF: t.Optional(t.String()),
+                    Cidade: t.Optional(t.String()),
+                    Bairro: t.Optional(t.String()),
+                    Endereco: t.Optional(t.String()),
+                    Numero: t.Optional(t.String()),
+                    Complemento: t.Optional(t.String()),
+                }),
+            }),
+        }
+    )
     .post(
         "/",
         async ({ body, set }) => {

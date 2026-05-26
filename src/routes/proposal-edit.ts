@@ -156,7 +156,8 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t1.nomMaterial AS Descricao,
                 t1.CodMaterial AS Codigo,
                 t1.idMaterialGrupo,
-                t2.nomGrupo AS Grupo
+                t2.nomGrupo AS Grupo,
+                flaComposicao = ISNULL(t1.flaComposicao, 0)
             FROM CRM_Produto_Material AS t1
             LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
             WHERE t1.flaAtivo = 1
@@ -173,12 +174,32 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t1.nomMaterial AS Descricao,
                 t1.CodMaterial AS Codigo,
                 t1.idMaterialGrupo,
-                t2.nomGrupo AS Grupo
+                t2.nomGrupo AS Grupo,
+                flaComposicao = ISNULL(t1.flaComposicao, 0)
             FROM CRM_Produto_Material AS t1
             LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
             WHERE t1.flaAtivo = 1
                 AND (t1.nomMaterial LIKE '%${q}%' OR t1.CodMaterial LIKE '%${q}%')
             ORDER BY t1.nomMaterial
+        `);
+        return convertBigIntToNumber(results);
+    })
+    .get("/products/:idMaterial/composicao", async ({ params }) => {
+        const idMaterial = Number(params.idMaterial);
+        const results: any[] = await prisma.$queryRawUnsafe(`
+            SELECT
+                m.idMaterial,
+                m.nomMaterial,
+                m.CodMaterial AS Codigo,
+                cm.Quantidade
+            FROM CRM_Produto_ComposicaoMaterial cm
+            JOIN CRM_Produto_Material m ON cm.idMaterial = m.idMaterial
+            WHERE cm.idComposicao = (
+                SELECT TOP 1 idComposicao
+                FROM CRM_Produto_ComposicaoMaterial
+                WHERE idMaterial = ${idMaterial}
+            )
+            AND cm.idMaterial <> ${idMaterial}
         `);
         return convertBigIntToNumber(results);
     })
