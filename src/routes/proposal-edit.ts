@@ -362,6 +362,50 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
 
         return { success: true };
     })
+    // ── PATCH /:id/items/:itemId  — editar Quantidade / Desconto / ValorEmbalagem ──
+    .patch("/:id/items/:itemId", async ({ params, body, set }) => {
+        const itemId   = Number(params.itemId);
+        const propId   = Number(params.id);
+        const { Quantidade, Desconto, ValorEmbalagem } = body as any;
+
+        const sets: string[] = [];
+        if (Quantidade    !== undefined) sets.push(`Quantidade    = ${Number(Quantidade)}`);
+        if (Desconto      !== undefined) sets.push(`Desconto      = ${Number(Desconto)}`);
+        if (ValorEmbalagem !== undefined) sets.push(`ValorEmbalagem = ${Number(ValorEmbalagem)}`);
+
+        if (sets.length === 0) { set.status = 400; return { error: "Nenhum campo enviado" }; }
+
+        try {
+            // Atualiza o item solicitado
+            await prisma.$queryRawUnsafe(
+                `UPDATE CRM_Proposta_Detalhe SET ${sets.join(", ")} WHERE idPropostaDetalhe = ${itemId}`
+            );
+
+            // Se é item pai de composição (idMaterial=0), propaga Quantidade e Desconto para filhos
+            const row: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idMaterial, idComposicao FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
+            );
+            if (row.length && Number(row[0].idMaterial) === 0 && Number(row[0].idComposicao) > 0) {
+                const childSets: string[] = [];
+                if (Quantidade !== undefined) childSets.push(`Quantidade = ${Number(Quantidade)}`);
+                if (Desconto   !== undefined) childSets.push(`Desconto   = ${Number(Desconto)}`);
+                if (childSets.length) {
+                    await prisma.$queryRawUnsafe(
+                        `UPDATE CRM_Proposta_Detalhe SET ${childSets.join(", ")}
+                         WHERE idComposicaoDetalhe = ${Number(row[0].idComposicao)} AND idProposta = ${propId}`
+                    );
+                }
+            }
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao atualizar item" };
+        }
+    }, {
+        params: t.Object({ id: t.String(), itemId: t.String() }),
+    })
+
     .delete("/:id/items/:itemId", async ({ params }) => {
         const itemId = Number(params.itemId);
         // Verifica se o item é pai de composição (idMaterial=0, idComposicao>0)
