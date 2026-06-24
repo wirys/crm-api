@@ -1,26 +1,20 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 
-// Helper function to convert BigInt to Number recursively
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
-
-    if (typeof obj === 'bigint') {
-        return Number(obj);
-    }
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => convertBigIntToNumber(item));
-    }
-
+    if (typeof obj === 'bigint') return Number(obj);
+    if (obj instanceof Date) return obj.toISOString();
+    // Prisma Decimal — has toNumber() method
+    if (typeof obj === 'object' && typeof obj.toNumber === 'function') return obj.toNumber();
+    if (Array.isArray(obj)) return obj.map(item => convertBigIntToNumber(item));
     if (typeof obj === 'object') {
         const converted: any = {};
-        for (const key in obj) {
+        for (const key of Object.keys(obj)) {
             converted[key] = convertBigIntToNumber(obj[key]);
         }
         return converted;
     }
-
     return obj;
 }
 

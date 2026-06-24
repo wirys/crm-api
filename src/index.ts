@@ -24,6 +24,12 @@ import { agendaRoutes } from "./routes/agenda";
 import { dashboardStatsRoutes } from "./routes/dashboard-stats";
 import { lixeiraRoutes } from "./routes/lixeira";
 import { perfilRoutes } from "./routes/perfil";
+import { tabelaPrecoRoutes } from "./routes/tabela-preco";
+import { estoqueImportRoutes } from "./routes/estoque-import";
+import { comprasRoutes, fornecedorRoutes } from "./routes/compras";
+import { ocorrenciasRoutes } from "./routes/ocorrencias";
+import { adminRoutes } from "./routes/admin";
+import { feriadosRoutes } from "./routes/feriados";
 
 const {URL, PORT} = Bun.env;
 
@@ -58,6 +64,13 @@ export const app = new Elysia()
     .use(dashboardStatsRoutes)
     .use(lixeiraRoutes)
     .use(perfilRoutes)
+    .use(tabelaPrecoRoutes)
+    .use(estoqueImportRoutes)
+    .use(comprasRoutes)
+    .use(fornecedorRoutes)
+    .use(ocorrenciasRoutes)
+    .use(adminRoutes)
+    .use(feriadosRoutes)
   .use(openapi({
         path: '/docs',
         documentation: {

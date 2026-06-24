@@ -4,17 +4,13 @@ import { prisma } from "../lib/prisma";
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
     if (typeof obj === 'bigint') return Number(obj);
-    if (obj instanceof Date) return obj;
+    if (obj instanceof Date) return obj.toISOString();
+    if (typeof obj === 'object' && typeof obj.toNumber === 'function') return obj.toNumber();
     if (typeof obj === 'object') {
         if (Array.isArray(obj)) return obj.map(item => convertBigIntToNumber(item));
-        if (obj.constructor?.name === 'Decimal' || (obj.s !== undefined && obj.e !== undefined && obj.d !== undefined)) {
-            return Number(obj.toString?.() ?? obj);
-        }
         const converted: any = {};
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                converted[key] = convertBigIntToNumber(obj[key]);
-            }
+        for (const key of Object.keys(obj)) {
+            converted[key] = convertBigIntToNumber(obj[key]);
         }
         return converted;
     }
@@ -135,7 +131,7 @@ export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
                 t2.NCM,
                 PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
                 PrecoKg         = ISNULL(t2.PrecoKg, 0),
-                ValorEmbalagem  = 0,
+                ValorEmbalagem  = ISNULL(t1.ValorEmbalagem, ISNULL(t2.ValorEmbalagem, 0)),
                 IPI             = ISNULL(t2.IPI, 0)
             FROM CRM_Proposta_Detalhe AS t1
             LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0

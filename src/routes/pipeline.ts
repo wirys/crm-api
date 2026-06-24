@@ -4,14 +4,13 @@ import { prisma } from "../lib/prisma";
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
     if (typeof obj === 'bigint') return Number(obj);
-    if (obj instanceof Date) return obj;
+    if (obj instanceof Date) return obj.toISOString();
+    if (typeof obj === 'object' && typeof obj.toNumber === 'function') return obj.toNumber();
     if (typeof obj === 'object') {
         if (Array.isArray(obj)) return obj.map(item => convertBigIntToNumber(item));
         const converted: any = {};
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                converted[key] = convertBigIntToNumber(obj[key]);
-            }
+        for (const key of Object.keys(obj)) {
+            converted[key] = convertBigIntToNumber(obj[key]);
         }
         return converted;
     }

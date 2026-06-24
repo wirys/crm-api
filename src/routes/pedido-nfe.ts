@@ -1,250 +1,202 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 
-function convertBigIntToNumber(obj: any): any {
+function conv(obj: any): any {
     if (obj === null || obj === undefined) return obj;
-    if (typeof obj === 'bigint') return Number(obj);
-    if (obj instanceof Date) return obj;
-    if (typeof obj === 'object') {
-        if (Array.isArray(obj)) return obj.map(item => convertBigIntToNumber(item));
-        const converted: any = {};
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                converted[key] = convertBigIntToNumber(obj[key]);
-            }
-        }
-        return converted;
+    if (typeof obj === "bigint") return Number(obj);
+    if (obj instanceof Date) return obj.toISOString();
+    if (Array.isArray(obj)) return obj.map(conv);
+    if (typeof obj === "object") {
+        if (typeof obj.toNumber === "function") return obj.toNumber();
+        const out: any = {};
+        for (const k in obj) out[k] = conv(obj[k]);
+        return out;
     }
     return obj;
 }
 
-export const pedidoNfeRoutes = new Elysia({ prefix: "/pedido-nfe" })
-    // Lista pedidos concluídos com filtros
-    .get("/", async ({ query }) => {
-        const {
-            propostaNo,
-            search,
-            dtaInicio,
-            dtaFim,
-            nomComercial,
-            representante,
-            page = 1,
-            limit = 50
-        } = query as any;
+const BASE_JOINS = `
+    FROM CRM_PedidosAbertos_ItemExtra e WITH (NOLOCK)
+    LEFT JOIN CRM_Proposta p   WITH (NOLOCK) ON e.PropostaNo = p.PropostaNo
+    LEFT JOIN CRM_Contato  c   WITH (NOLOCK) ON p.idContato  = c.idContato
+    LEFT JOIN CRM_Usuario  rep WITH (NOLOCK) ON c.idRepresentante = rep.idUsuario
+    LEFT JOIN CRM_StatusGeral sg_est WITH (NOLOCK) ON e.idEstoqueStatus    = sg_est.id
+    LEFT JOIN CRM_StatusGeral sg_fin WITH (NOLOCK) ON e.idFinanceiroStatus = sg_fin.id
+    LEFT JOIN CRM_StatusGeral sg_prod WITH (NOLOCK) ON e.idProducaoStatus  = sg_prod.id
+    LEFT JOIN CRM_StatusGeral sg_exp WITH (NOLOCK) ON e.idExpedicaoStatus  = sg_exp.id
+    LEFT JOIN CRM_StatusGeral sg_pri WITH (NOLOCK) ON e.idPrioridadeStatus = sg_pri.id
+    LEFT JOIN CRM_StatusGeral sg_sep WITH (NOLOCK) ON e.idSeparacaoStatus  = sg_sep.id
+    LEFT JOIN CRM_StatusGeral sg_set WITH (NOLOCK) ON e.idSetorStatus      = sg_set.id
+    LEFT JOIN CRM_StatusGeral sg_ac  WITH (NOLOCK) ON e.idAcertoCorStatus  = sg_ac.id
+    LEFT JOIN CRM_StatusGeral sg_env WITH (NOLOCK) ON e.idEnvaseStatus     = sg_env.id
+`;
 
-        const skip = (Number(page) - 1) * Number(limit);
+const BASE_SELECT = `
+    SELECT
+        e.id,
+        e.idPropostaDetalhe,
+        PropostaNo          = ISNULL(e.PropostaNo, ''),
+        dtaEnvio            = ISNULL(CONVERT(varchar(10), e.dtaEnvio, 23), ''),
+        nomComercial        = ISNULL(e.nomComercial, ''),
+        NCM                 = ISNULL(e.NCM, ''),
+        CodMaterial         = ISNULL(e.CodMaterial, ''),
+        nomMaterial         = ISNULL(e.nomMaterial, ''),
+        Unidade             = ISNULL(e.Unidade, ''),
+        PesoEmbalagem       = ISNULL(e.PesoEmbalagem, 0),
+        TTKG                = ISNULL(e.TTKG, 0),
+        TTCJ                = ISNULL(e.TTCJ, 0),
+        Lote                = ISNULL(e.Lote, ''),
+        codTotvs            = ISNULL(e.codTotvs, ''),
+        Representante       = ISNULL(rep.Nome, ''),
+        Cliente             = ISNULL(c.nomComercial, ''),
+        e.idEstoqueStatus,
+        e.idFinanceiroStatus,
+        e.idProducaoStatus,
+        e.idExpedicaoStatus,
+        StatusEstoque       = ISNULL(sg_est.Status, ''),
+        CorEstoque          = ISNULL(sg_est.CorHTML, ''),
+        StatusFinanceiro    = ISNULL(sg_fin.Status, ''),
+        CorFinanceiro       = ISNULL(sg_fin.CorHTML, ''),
+        StatusProducao      = ISNULL(sg_prod.Status, ''),
+        CorProducao         = ISNULL(sg_prod.CorHTML, ''),
+        StatusExpedicao     = ISNULL(sg_exp.Status, ''),
+        CorExpedicao        = ISNULL(sg_exp.CorHTML, ''),
+        StatusPrioridade    = ISNULL(sg_pri.Status, ''),
+        CorPrioridade       = ISNULL(sg_pri.CorHTML, ''),
+        StatusSeparacao     = ISNULL(sg_sep.Status, ''),
+        CorSeparacao        = ISNULL(sg_sep.CorHTML, ''),
+        StatusSetor         = ISNULL(sg_set.Status, ''),
+        CorSetor            = ISNULL(sg_set.CorHTML, ''),
+        StatusAcertoCor     = ISNULL(sg_ac.Status, ''),
+        CorAcertoCor        = ISNULL(sg_ac.CorHTML, ''),
+        StatusEnvase        = ISNULL(sg_env.Status, ''),
+        CorEnvase           = ISNULL(sg_env.CorHTML, ''),
+        dtaInicio           = ISNULL(CONVERT(varchar(10), e.dtaInicio, 23), ''),
+        dtaEntrega          = ISNULL(CONVERT(varchar(10), e.dtaEntrega, 23), ''),
+        dtaFinalEfetiva     = ISNULL(CONVERT(varchar(10), e.dtaFinalEfetiva, 23), '')
+`;
+
+const ALLOWED_STATUS_FIELDS = [
+    "idEstoqueStatus",
+    "idFinanceiroStatus",
+    "idProducaoStatus",
+    "idExpedicaoStatus",
+    "idPrioridadeStatus",
+    "idSetorStatus",
+    "idSeparacaoStatus",
+    "idAcertoCorStatus",
+    "idEnvaseStatus",
+];
+
+export const pedidoNfeRoutes = new Elysia({ prefix: "/pedido-nfe" })
+
+    .get("/", async ({ query }) => {
+        const { search, propostaNo, codMaterial, representante, dtaInicio, dtaFim, page, limit, userId, userGroup } = query as Record<string, string | undefined>;
+
+        const uid = Number(userId || 0);
+        const ugid = Number(userGroup || 0);
+        const isAdmin = [1, 2, 3, 5, 7].includes(ugid);
+
+        const pageNum = Math.max(1, Number(page ?? 1));
+        const limitNum = Math.max(1, Number(limit ?? 50));
+        const offset = (pageNum - 1) * limitNum;
+
+        const conds: string[] = [];
+
+        if (!isAdmin && uid > 0) conds.push(`c.idRepresentante = ${uid}`);
+
+        if (propostaNo) conds.push(`e.PropostaNo LIKE '%${propostaNo.replace(/'/g, "''")}%'`);
+        if (codMaterial) conds.push(`e.CodMaterial LIKE '%${codMaterial.replace(/'/g, "''")}%'`);
+        if (representante) conds.push(`rep.Nome LIKE '%${representante.replace(/'/g, "''")}%'`);
+        if (dtaInicio) conds.push(`e.dtaEnvio >= '${dtaInicio}'`);
+        if (dtaFim) conds.push(`e.dtaEnvio <= '${dtaFim} 23:59:59'`);
+        if (search) {
+            const s = search.replace(/'/g, "''");
+            conds.push(`(e.PropostaNo LIKE '%${s}%' OR e.nomComercial LIKE '%${s}%' OR e.nomMaterial LIKE '%${s}%' OR c.nomComercial LIKE '%${s}%' OR e.Lote LIKE '%${s}%')`);
+        }
+
+        const where = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
 
         try {
-            // Buscar propostas concluídas (idStatus 4 ou 5)
-            const wherePropostas: any = {
-                idStatus: { in: [4, 5] }
+            const [rows, countRows] = await Promise.all([
+                prisma.$queryRawUnsafe(`
+                    ${BASE_SELECT}
+                    ${BASE_JOINS}
+                    ${where}
+                    ORDER BY e.dtaEnvio DESC, e.id DESC
+                    OFFSET ${offset} ROWS FETCH NEXT ${limitNum} ROWS ONLY
+                `),
+                prisma.$queryRawUnsafe(`
+                    SELECT Total = COUNT(*) ${BASE_JOINS} ${where}
+                `),
+            ]);
+
+            const total = conv(countRows)[0]?.Total ?? 0;
+            return {
+                data: conv(rows),
+                meta: { page: pageNum, limit: limitNum, total, hasMore: offset + limitNum < total }
             };
-
-            if (propostaNo) {
-                wherePropostas.PropostaNo = { contains: propostaNo };
-            }
-
-            if (search) {
-                wherePropostas.OR = [
-                    { PropostaNo: { contains: search } },
-                ];
-            }
-
-            if (dtaInicio && dtaFim) {
-                wherePropostas.dtaCriacao = {
-                    gte: new Date(dtaInicio),
-                    lte: new Date(dtaFim)
-                };
-            }
-
-            // Buscar propostas
-            const propostas = await prisma.cRM_Proposta.findMany({
-                where: wherePropostas,
-                select: {
-                    idProposta: true,
-                    PropostaNo: true,
-                    dtaCriacao: true,
-                    idContato: true,
-                    idUsuario: true
-                },
-                orderBy: { idProposta: 'desc' },
-                skip,
-                take: Number(limit)
-            });
-
-            const total = await prisma.cRM_Proposta.count({ where: wherePropostas });
-
-            // Buscar dados relacionados
-            const propostaIds = propostas.map(p => p.idProposta);
-            const contatoIds = [...new Set(propostas.map(p => p.idContato).filter(Boolean))] as number[];
-            const usuarioIds = [...new Set(propostas.map(p => p.idUsuario).filter(Boolean))] as number[];
-
-            // Buscar detalhes das propostas
-            const detalhes = await prisma.cRM_Proposta_Detalhe.findMany({
-                where: { idProposta: { in: propostaIds } },
-                select: {
-                    idPropostaDetalhe: true,
-                    idProposta: true,
-                    idMaterial: true,
-                    Quantidade: true,
-                    MaterialDescricao: true,
-                    dtaEnvio: true
-                }
-            });
-
-            // Buscar contatos
-            const contatos = contatoIds.length > 0 ? await prisma.cRM_Contato.findMany({
-                where: { idContato: { in: contatoIds } },
-                select: { idContato: true, nomComercial: true }
-            }) : [];
-
-            // Buscar usuários/representantes
-            const usuarios = usuarioIds.length > 0 ? await prisma.cRM_Usuario.findMany({
-                where: { idUsuario: { in: usuarioIds } },
-                select: { idUsuario: true, Nome: true }
-            }) : [];
-
-            // Buscar materiais
-            const materialIds = [...new Set(detalhes.map(d => d.idMaterial).filter(Boolean))] as number[];
-            const materiais = materialIds.length > 0 ? await prisma.cRM_Produto_Material.findMany({
-                where: { idMaterial: { in: materialIds } },
-                select: { idMaterial: true, CodMaterial: true, nomMaterial: true, Unidade: true, PesoEmbalagem: true }
-            }) : [];
-
-            // Mapear dados
-            const contatoMap = new Map(contatos.map(c => [c.idContato, c]));
-            const usuarioMap = new Map(usuarios.map(u => [u.idUsuario, u]));
-            const materialMap = new Map(materiais.map(m => [m.idMaterial, m]));
-            const propostaMap = new Map(propostas.map(p => [p.idProposta, p]));
-
-            // Formatar items
-            const formattedItems = detalhes.map(detalhe => {
-                const proposta = propostaMap.get(detalhe.idProposta || 0);
-                const contato = proposta?.idContato ? contatoMap.get(proposta.idContato) : null;
-                const usuario = proposta?.idUsuario ? usuarioMap.get(proposta.idUsuario) : null;
-                const material = detalhe.idMaterial ? materialMap.get(detalhe.idMaterial) : null;
-
-                return {
-                    idPropostaDetalhe: detalhe.idPropostaDetalhe,
-                    idProposta: detalhe.idProposta,
-                    PropostaNo: proposta?.PropostaNo || '',
-                    dtaEnvio: detalhe.dtaEnvio || proposta?.dtaCriacao,
-                    nomComercial: contato?.nomComercial || '',
-                    codMaterial: material?.CodMaterial || '',
-                    nomMaterial: material?.nomMaterial || detalhe.MaterialDescricao || '',
-                    Unidade: material?.Unidade || '',
-                    Quantidade: detalhe.Quantidade,
-                    PesoEmbalagem: material?.PesoEmbalagem || 0,
-                    representante: usuario?.Nome || '',
-                    // Status padrão (sem relações de status no schema atual)
-                    Financeiro_Status: 'Concluído',
-                    Financeiro_Cor: '#28a745',
-                    Estoque_Status: 'Concluído',
-                    Estoque_Cor: '#28a745',
-                    Producao_Status: 'Concluído',
-                    Producao_Cor: '#28a745',
-                    Expedicao_Status: 'Concluído',
-                    Expedicao_Cor: '#28a745',
-                    // Campos para NFe (não existem no schema atual)
-                    xmlNfe: null,
-                    chaveNfe: null,
-                    numeroNfe: null,
-                    dtaEmissaoNfe: null
-                };
-            });
-
-            return convertBigIntToNumber({
-                data: formattedItems,
-                meta: {
-                    page: Number(page),
-                    limit: Number(limit),
-                    total,
-                    hasMore: skip + formattedItems.length < total
-                }
-            });
         } catch (error: any) {
             console.error('Erro ao buscar pedidos:', error);
-            return {
-                data: [],
-                meta: { page: 1, limit: 50, total: 0, hasMore: false },
-                error: error?.message || 'Erro ao buscar pedidos'
-            };
+            return { data: [], meta: { page: 1, limit: 50, total: 0, hasMore: false }, error: error?.message };
         }
     })
 
-    // Upload e associação de XML da NFe (desabilitado - campos não existem no schema)
-    .post("/upload-xml/:idPropostaDetalhe", async ({ params, body }) => {
+    .get("/statuses", async () => {
+        const rows: any[] = await prisma.$queryRawUnsafe(`
+            SELECT id, Status, CorHTML, flaFinanceiro, flaEstoque, flaProducao, flaExpedicao
+            FROM CRM_StatusGeral WITH (NOLOCK)
+            ORDER BY id
+        `);
+        const all = conv(rows);
         return {
-            success: false,
-            error: "Funcionalidade de upload de NFe não disponível. Os campos xmlNfe, chaveNfe, numeroNfe precisam ser adicionados ao schema."
+            financeiro: all.filter((r: any) => r.flaFinanceiro),
+            estoque: all.filter((r: any) => r.flaEstoque),
+            producao: all.filter((r: any) => r.flaProducao),
+            expedicao: all.filter((r: any) => r.flaExpedicao),
         };
+    })
+
+    .patch("/:id/status", async ({ params, body, set }) => {
+        const id = Number(params.id);
+        const { field, idStatus } = body;
+
+        if (!ALLOWED_STATUS_FIELDS.includes(field)) {
+            set.status = 400;
+            return { error: `Campo '${field}' não permitido.` };
+        }
+
+        try {
+            await prisma.$queryRawUnsafe(
+                `UPDATE CRM_PedidosAbertos_ItemExtra SET ${field} = ${Number(idStatus)} WHERE id = ${id}`
+            );
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao atualizar status" };
+        }
     }, {
-        body: t.Object({
-            xmlContent: t.String(),
-            chaveNfe: t.Optional(t.String()),
-            numeroNfe: t.Optional(t.String())
-        })
-    })
-
-    // Obter XML da NFe associada a um pedido (desabilitado - campos não existem no schema)
-    .get("/xml/:idPropostaDetalhe", async ({ params }) => {
-        return { error: "Funcionalidade de XML de NFe não disponível. Os campos precisam ser adicionados ao schema." };
-    })
-
-    // Filtros auxiliares
-    .get("/filtros/propostas", async () => {
-        const propostas = await prisma.cRM_Proposta.findMany({
-            where: {
-                PropostaNo: { not: null }
-            },
-            select: {
-                idProposta: true,
-                PropostaNo: true
-            },
-            orderBy: { PropostaNo: 'asc' },
-            take: 1000
-        });
-        return convertBigIntToNumber(propostas);
-    })
-
-    .get("/filtros/contatos", async () => {
-        const contatos = await prisma.cRM_Contato.findMany({
-            select: {
-                idContato: true,
-                nomComercial: true,
-                CNPJ: true
-            },
-            orderBy: { nomComercial: 'asc' },
-            take: 1000
-        });
-        return convertBigIntToNumber(contatos);
-    })
-
-    .get("/filtros/produtos", async () => {
-        const produtos = await prisma.cRM_Produto_Material.findMany({
-            where: {
-                CodMaterial: { notIn: ['', '???'] }
-            },
-            select: {
-                CodMaterial: true,
-                nomMaterial: true,
-                Unidade: true
-            },
-            distinct: ['CodMaterial'],
-            orderBy: { CodMaterial: 'asc' },
-            take: 1000
-        });
-        return convertBigIntToNumber(produtos);
+        params: t.Object({ id: t.String() }),
+        body: t.Object({ field: t.String(), idStatus: t.Number() }),
     })
 
     .get("/filtros/representantes", async () => {
-        const representantes = await prisma.cRM_Usuario.findMany({
-            select: {
-                idUsuario: true,
-                Nome: true
-            },
-            orderBy: { Nome: 'asc' },
-            take: 100
-        });
-        return convertBigIntToNumber(representantes);
+        const reps = await prisma.$queryRawUnsafe(`
+            SELECT DISTINCT u.idUsuario, u.Nome
+            FROM CRM_Usuario u WITH (NOLOCK)
+            WHERE u.flaAtivo = 1
+            ORDER BY u.Nome
+        `);
+        return conv(reps);
+    })
+
+    .get("/filtros/propostas", async () => {
+        const rows = await prisma.$queryRawUnsafe(`
+            SELECT DISTINCT TOP 1000 PropostaNo
+            FROM CRM_PedidosAbertos_ItemExtra WITH (NOLOCK)
+            WHERE PropostaNo IS NOT NULL AND PropostaNo <> ''
+            ORDER BY PropostaNo DESC
+        `);
+        return conv(rows);
     });
