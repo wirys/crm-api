@@ -15,7 +15,7 @@ function conv(obj: any): any {
     return obj;
 }
 
-export const tabelaPrecoRoutes = new Elysia({ prefix: "/tabela-preco" })
+export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"] }, prefix: "/tabela-preco" })
 
     .get("/", async () => {
         const rows = await prisma.tbTabelaPreco.findMany({

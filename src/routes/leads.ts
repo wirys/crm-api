@@ -12,7 +12,7 @@ function convertBigInt(obj: any): any {
     return obj;
 }
 
-export const leadsRoutes = new Elysia({ prefix: "/leads" })
+export const leadsRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: "/leads" })
 
     // GET /leads — lista com joins (equivalente ao sp_contatos_lista)
     .get("/", async ({ query }) => {
@@ -155,7 +155,7 @@ export const leadsRoutes = new Elysia({ prefix: "/leads" })
     });
 
 // ─── Representantes ─────────────────────────────────────────────────────────
-export const representativesRoutes = new Elysia({ prefix: "/representatives" })
+export const representativesRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: "/representatives" })
     .get("/", async () => {
         try {
             const rows: any[] = await prisma.$queryRawUnsafe(`
@@ -179,7 +179,7 @@ export const representativesRoutes = new Elysia({ prefix: "/representatives" })
     });
 
 // ─── Status ─────────────────────────────────────────────────────────────────
-export const statusRoutes = new Elysia({ prefix: "/status" })
+export const statusRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: "/status" })
     .get("/", async () => {
         try {
             const rows: any[] = await prisma.$queryRawUnsafe(
@@ -193,7 +193,7 @@ export const statusRoutes = new Elysia({ prefix: "/status" })
     });
 
 // ─── Origem ─────────────────────────────────────────────────────────────────
-export const origemRoutes = new Elysia({ prefix: "/origem" })
+export const origemRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: "/origem" })
     .get("/", async () => {
         try {
             const rows: any[] = await prisma.$queryRawUnsafe(

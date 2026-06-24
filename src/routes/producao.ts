@@ -91,7 +91,7 @@ const BASE_SELECT = `
         CorFinanceiro       = ISNULL(sg_fin.CorHTML, '')
 `;
 
-export const producaoRoutes = new Elysia({ prefix: "/producao" })
+export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefix: "/producao" })
 
     // ── GET /producao ─── em andamento ───────────────────────────────────────
     .get("/", async ({ query }) => {

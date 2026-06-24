@@ -17,7 +17,7 @@ function convertBigIntToNumber(obj: any): any {
     return obj;
 }
 
-export const pipelineRoutes = new Elysia({ prefix: "/pipeline" })
+export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: "/pipeline" })
     .get("/", async ({ query }) => {
         const {
             estagioProposta,

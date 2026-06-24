@@ -20,7 +20,7 @@ function convertBigInt(obj: any): any {
 }
 
 // Rotas de Atividade Tipo
-export const atividadeTipoRoutes = new Elysia({ prefix: "/atividadeTipo" })
+export const atividadeTipoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/atividadeTipo" })
     .get("/", async () => {
         try {
             const tipos = await prisma.$queryRaw`
@@ -40,7 +40,7 @@ export const atividadeTipoRoutes = new Elysia({ prefix: "/atividadeTipo" })
     });
 
 // Rotas de Atividade Status
-export const atividadeStatusRoutes = new Elysia({ prefix: "/atividadeStatus" })
+export const atividadeStatusRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/atividadeStatus" })
     .get("/", async ({ query }) => {
         const idTipo = query.idTipo as string;
 
@@ -63,7 +63,7 @@ export const atividadeStatusRoutes = new Elysia({ prefix: "/atividadeStatus" })
     });
 
 // Rotas de Interação
-export const interacaoRoutes = new Elysia({ prefix: "/interacao" })
+export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/interacao" })
     // GET - Listar interações
     .get("/", async ({ query }) => {
         const idContato = query.idContato as string;
@@ -189,7 +189,7 @@ export const interacaoRoutes = new Elysia({ prefix: "/interacao" })
     });
 
 // Rotas de Arquivo
-export const arquivosRoutes = new Elysia({ prefix: "/arquivos" })
+export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/arquivos" })
     // GET - Listar arquivos
     .get("/", async ({ query }) => {
         const idContato = query.idContato as string;

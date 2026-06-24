@@ -3,7 +3,7 @@ import { jwt } from "@elysiajs/jwt";
 import { Elysia } from "elysia";
 import { prisma } from "../lib/prisma";
 
-export const dashboardRoutes = new Elysia({ prefix: "/dashboard" })
+export const dashboardRoutes = new Elysia({ detail: { tags: ["Dashboard"] }, prefix: "/dashboard" })
     .use(
         jwt({
             name: "jwt",

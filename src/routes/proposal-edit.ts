@@ -17,7 +17,7 @@ function convertBigIntToNumber(obj: any): any {
     return obj;
 }
 
-export const proposalEditRoutes = new Elysia({ prefix: "/proposal-edit" })
+export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, prefix: "/proposal-edit" })
     .get("/:id", async ({ params }) => {
         const id = Number(params.id);
         const results: any[] = await prisma.$queryRawUnsafe(`

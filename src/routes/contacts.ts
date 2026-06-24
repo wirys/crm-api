@@ -18,7 +18,7 @@ function convertBigIntToNumber(obj: any): any {
     return obj;
 }
 
-export const contactsRoutes = new Elysia({ prefix: "/contacts" })
+export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/contacts" })
     .get("/segments", async () => {
         return await prisma.cRM_SegmentoAtuacao.findMany({
             select: {

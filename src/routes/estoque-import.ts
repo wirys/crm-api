@@ -15,7 +15,7 @@ function conv(obj: any): any {
     return obj;
 }
 
-export const estoqueImportRoutes = new Elysia({ prefix: "/estoque-import" })
+export const estoqueImportRoutes = new Elysia({ detail: { tags: ["Estoque"] }, prefix: "/estoque-import" })
 
     .post("/", async ({ body, set }) => {
         const { dados } = body as { dados: { Codigo: string; Descricao: string; Saldo: number; NCM?: string; Unidade?: string }[] };

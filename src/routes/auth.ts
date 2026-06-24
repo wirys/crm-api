@@ -5,7 +5,7 @@ import { createHash } from "crypto";
 import { Elysia, t } from "elysia";
 
 
-export const authRoutes = new Elysia({ prefix: "/auth" })
+export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"] } })
     .use(
         jwt({
             name: "jwt",

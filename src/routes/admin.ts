@@ -15,7 +15,7 @@ function conv(obj: any): any {
     return obj;
 }
 
-export const adminRoutes = new Elysia({ prefix: "/admin" })
+export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/admin" })
 
     .post("/transferir-carteira", async ({ body, set }) => {
         const { idRepresentanteOrigem, idRepresentanteDestino, idContatos } = body;

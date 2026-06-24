@@ -88,7 +88,7 @@ const ALLOWED_STATUS_FIELDS = [
     "idEnvaseStatus",
 ];
 
-export const pedidoNfeRoutes = new Elysia({ prefix: "/pedido-nfe" })
+export const pedidoNfeRoutes = new Elysia({ detail: { tags: ["Pedidos"] }, prefix: "/pedido-nfe" })
 
     .get("/", async ({ query }) => {
         const { search, propostaNo, codMaterial, representante, dtaInicio, dtaFim, page, limit, userId, userGroup } = query as Record<string, string | undefined>;

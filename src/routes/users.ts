@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 
-export const usersRoutes = new Elysia({ prefix: "/users" })
+export const usersRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix: "/users" })
     .get("/", async () => {
         try {
             const users = await prisma.$queryRaw`

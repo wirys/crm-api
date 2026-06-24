@@ -18,7 +18,7 @@ function convertBigIntToNumber(obj: any): any {
     return obj;
 }
 
-export const proposalsRoutes = new Elysia({ prefix: "/proposals" })
+export const proposalsRoutes = new Elysia({ detail: { tags: ["Propostas"] }, prefix: "/proposals" })
     .get("/contact/:id", async ({ params }) => {
         const contactId = parseInt(params.id);
 

@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
-export const activitiesRoutes = new Elysia({ prefix: '/atividades' })
+export const activitiesRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefix: '/atividades' })
     .get("/", async ({ query }) => {
         try {
             // Parse filter parameters

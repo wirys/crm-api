@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 
-export const stockRoutes = new Elysia({ prefix: '/estoque' })
+export const stockRoutes = new Elysia({ detail: { tags: ["Estoque"] }, prefix: '/estoque' })
     .get("/", async ({ query }) => {
         const page = Math.max(1, Number(query.page) || 1);
         const limit = Math.max(1, Number(query.limit) || 50);

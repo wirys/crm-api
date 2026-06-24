@@ -36,6 +36,7 @@ const {URL, PORT} = Bun.env;
 
 export const app = new Elysia()
   .use(cors())
+  .get('/', ({ redirect }) => redirect('/docs'), { detail: { hide: true } })
   .use(stockRoutes)
   .use(authRoutes)
   .use(usersRoutes)
@@ -75,22 +76,56 @@ export const app = new Elysia()
         path: '/docs',
         documentation: {
             info: {
-                version: '0.0.1',
-                title: 'CRM - Eltech',
-                description: `API documentation for Eltech Core and related Services.<br>Authentication routes: http://${URL || 'localhost:' + PORT}/auth/docs`,
+                version: '1.0.0',
+                title: 'CRM Eltech - API',
+                description: [
+                    'Documentacao da API do CRM Eltech.',
+                    '',
+                    '**Modulos disponiveis:**',
+                    '- **Auth** — Autenticacao e sessao',
+                    '- **Contatos** — Cadastro, listagem, interacao e lixeira',
+                    '- **Propostas** — Criacao, edicao, checagem, pipeline e proposta comercial',
+                    '- **Atividades** — Registro e consolidacao de atividades comerciais',
+                    '- **Producao** — Acompanhamento de producao e concluidos',
+                    '- **Expedicao** — Separacao, rastreamento e interacao',
+                    '- **Pedidos/NF-e** — Gestao de pedidos em aberto',
+                    '- **Estoque** — Consulta e importacao',
+                    '- **Compras** — Catalogo de materiais e fornecedores',
+                    '- **Tabela de Preco** — Importacao e publicacao',
+                    '- **Ocorrencias** — RNC, RFE, Contato e Colaborador',
+                    '- **Admin** — Transferencia de carteira, convites, log e feriados',
+                    '- **Dashboard** — Indicadores e estatisticas',
+                ].join('\n'),
                 contact: {
                     url: 'https://brapri.com',
-                    name: 'Need help? Contact Brapri Development Team!',
+                    name: 'Brapri Development Team',
                     email: 'dev@brapri.com'
                 },
                 license: {
                     name: 'Brapri License',
                     url: 'https://brapri.com/license'
                 },
-                termsOfService: 'https://flamus.com/terms'
+                termsOfService: 'https://brapri.com/terms'
             },
             openapi: '3.0.0',
-            // servers: [{url: URL}]
+            servers: [{ url: URL ? `https://${URL}` : `http://localhost:${PORT || 3000}` }],
+            tags: [
+                { name: 'Auth', description: 'Autenticacao e sessao' },
+                { name: 'Contatos', description: 'Cadastro e gestao de contatos/clientes' },
+                { name: 'Propostas', description: 'Criacao e edicao de propostas comerciais' },
+                { name: 'Pipeline', description: 'Funil de vendas e leads' },
+                { name: 'Atividades', description: 'Atividades comerciais' },
+                { name: 'Producao', description: 'Acompanhamento de producao' },
+                { name: 'Expedicao', description: 'Separacao, rastreamento e despacho' },
+                { name: 'Pedidos', description: 'Pedidos em aberto e NF-e' },
+                { name: 'Estoque', description: 'Consulta e importacao de estoque' },
+                { name: 'Compras', description: 'Catalogo de materiais e fornecedores' },
+                { name: 'Tabela de Preco', description: 'Importacao e publicacao de precos' },
+                { name: 'Ocorrencias', description: 'RNC, RFE, Contato e Colaborador' },
+                { name: 'Admin', description: 'Painel administrativo' },
+                { name: 'Dashboard', description: 'Indicadores e estatisticas' },
+                { name: 'Usuarios', description: 'Gestao de usuarios' },
+            ],
         }
     }))
   .listen(3000);

@@ -15,7 +15,7 @@ function conv(obj: any): any {
     return obj;
 }
 
-export const separacaoRoutes = new Elysia({ prefix: "/separacao" })
+export const separacaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, prefix: "/separacao" })
 
     // ── GET /separacao ────────────────────────────────────────────────────────
     .get("/", async ({ query }) => {

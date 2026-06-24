@@ -15,7 +15,7 @@ function conv(obj: any): any {
     return obj;
 }
 
-export const feriadosRoutes = new Elysia({ prefix: "/feriados" })
+export const feriadosRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/feriados" })
 
     .get("/", async ({ query }) => {
         const { ano } = query as Record<string, string | undefined>;
