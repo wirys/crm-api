@@ -131,7 +131,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 t2.NCM,
                 PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
                 PrecoKg         = ISNULL(t2.PrecoKg, 0),
-                ValorEmbalagem  = ISNULL(t1.ValorEmbalagem, ISNULL(t2.ValorEmbalagem, 0)),
+                ValorEmbalagem  = ISNULL(t2.ValorEmbalagem, 0),
                 IPI             = ISNULL(t2.IPI, 0)
             FROM CRM_Proposta_Detalhe AS t1
             LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0
@@ -525,16 +525,15 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
 
         return { success: true };
     })
-    // ── PATCH /:id/items/:itemId  — editar Quantidade / Desconto / ValorEmbalagem ──
+    // ── PATCH /:id/items/:itemId  — editar Quantidade / Desconto ──
     .patch("/:id/items/:itemId", async ({ params, body, set }) => {
         const itemId   = Number(params.itemId);
         const propId   = Number(params.id);
-        const { Quantidade, Desconto, ValorEmbalagem, idEtapa } = body as any;
+        const { Quantidade, Desconto, idEtapa } = body as any;
 
         const sets: string[] = [];
         if (Quantidade    !== undefined) sets.push(`Quantidade    = ${Number(Quantidade)}`);
         if (Desconto      !== undefined) sets.push(`Desconto      = ${Number(Desconto)}`);
-        if (ValorEmbalagem !== undefined) sets.push(`ValorEmbalagem = ${Number(ValorEmbalagem)}`);
         if (idEtapa !== undefined) sets.push(`idEtapa = ${Number(idEtapa)}`);
 
         if (sets.length === 0) { set.status = 400; return { error: "Nenhum campo enviado" }; }
