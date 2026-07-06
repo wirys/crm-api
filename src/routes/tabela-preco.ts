@@ -18,18 +18,20 @@ function conv(obj: any): any {
 export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"] }, prefix: "/tabela-preco" })
 
     .get("/", async () => {
-        const rows = await prisma.tbTabelaPreco.findMany({
-            orderBy: { id: "desc" },
-        });
+        const rows = await prisma.$queryRawUnsafe(`
+            SELECT TOP 10 id, idUsuario, ArquivoNome, ArquivoNomeSistema, ArquivoTipo,
+                   CaminhoArquivo, dtaCriacao, Status
+            FROM tbTabelaPreco
+            ORDER BY dtaCriacao DESC
+        `);
         return conv(rows);
     })
 
     .get("/:id/dados", async ({ params }) => {
         const id = Number(params.id);
-        const rows = await prisma.tbTabelaPrecoImport.findMany({
-            where: { idTabelaPreco: id },
-            orderBy: [{ Linha: "asc" }, { Coluna: "asc" }],
-        });
+        const rows = await prisma.$queryRawUnsafe(`
+            EXEC sp_CRMTabelaPrecoImportada
+        `);
         return conv(rows);
     })
 
@@ -45,7 +47,7 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
                     ArquivoNomeSistema: `tabela_${Date.now()}.xlsx`,
                     CaminhoArquivo: `/uploads/tabela-preco/`,
                     dtaCriacao: new Date(),
-                    Status: "Pendente",
+                    Status: "Arquivo Importado",
                 },
             });
             return conv({ success: true, id: registro.id });
@@ -67,17 +69,18 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         const { dados } = body as { dados: { linha: number; coluna: number; valor: string }[] };
 
         try {
-            await prisma.$queryRawUnsafe(`DELETE FROM tbTabelaPrecoImport WHERE idTabelaPreco = ${id}`);
+            // Legado faz TRUNCATE antes de importar (não usa idTabelaPreco)
+            await prisma.$queryRawUnsafe(`TRUNCATE TABLE tbTabelaPrecoImport`);
 
             const BATCH_SIZE = 500;
             for (let i = 0; i < dados.length; i += BATCH_SIZE) {
                 const batch = dados.slice(i, i + BATCH_SIZE);
                 const values = batch
-                    .map(d => `(${id}, ${d.linha}, ${d.coluna}, '${(d.valor || '').replace(/'/g, "''")}')`)
-                    .join(",");
+                    .map(d => `SELECT ${d.linha}, ${d.coluna}, '${(d.valor || '').replace(/'/g, "''")}'`)
+                    .join(" UNION ALL ");
                 await prisma.$queryRawUnsafe(`
-                    INSERT INTO tbTabelaPrecoImport (idTabelaPreco, Linha, Coluna, Valor)
-                    VALUES ${values}
+                    INSERT INTO tbTabelaPrecoImport (Linha, Coluna, Valor)
+                    ${values}
                 `);
             }
 
@@ -107,50 +110,15 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         const id = Number(params.id);
 
         try {
-            const importedData = await prisma.tbTabelaPrecoImport.findMany({
-                where: { idTabelaPreco: id },
-                orderBy: [{ Linha: "asc" }, { Coluna: "asc" }],
-            });
-
-            if (importedData.length === 0) {
-                set.status = 400;
-                return { error: "Nenhum dado importado para publicar" };
-            }
-
-            const linhasMap = new Map<number, Map<number, string>>();
-            for (const row of importedData) {
-                if (row.Linha == null || row.Coluna == null) continue;
-                if (!linhasMap.has(row.Linha)) linhasMap.set(row.Linha, new Map());
-                linhasMap.get(row.Linha)!.set(row.Coluna, row.Valor || "");
-            }
-
-            let updated = 0;
-            for (const [linha, colunas] of linhasMap) {
-                if (linha <= 1) continue;
-                const codProduto = colunas.get(1) || "";
-                if (!codProduto) continue;
-
-                const preco7 = parseFloat(colunas.get(2) || "0") || null;
-                const preco12 = parseFloat(colunas.get(3) || "0") || null;
-                const preco18 = parseFloat(colunas.get(4) || "0") || null;
-
-                const result = await prisma.$queryRawUnsafe(`
-                    UPDATE CRM_Produto_Material
-                    SET PrecoKg07 = ${preco7 ?? 'NULL'},
-                        PrecoKg12 = ${preco12 ?? 'NULL'},
-                        PrecoKg18 = ${preco18 ?? 'NULL'},
-                        dtaAtualizacao = GETDATE()
-                    WHERE CodMaterial = '${codProduto.replace(/'/g, "''")}'
-                `);
-                updated++;
-            }
+            // Usa a mesma stored procedure do legado
+            await prisma.$queryRawUnsafe(`EXEC sp_CRMTabelaPrecoPublicar`);
 
             await prisma.tbTabelaPreco.update({
                 where: { id },
-                data: { Status: "Publicado" },
+                data: { Status: "Tabela Publicada" },
             });
 
-            return { success: true, updated };
+            return { success: true };
         } catch (e: any) {
             console.error(e);
             set.status = 500;

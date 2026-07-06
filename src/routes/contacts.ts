@@ -156,13 +156,17 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                 const contactId = parseInt(params.id);
                 const { contact, address } = body;
 
+                const { flaAtivo, idBotConversa, dtaAbertura, dtaNascimento, dtaCadastro, idRepresentante, IdOrigem, ...rest } = contact;
                 await prisma.cRM_Contato.update({
                     where: { idContato: contactId },
                     data: {
-                        ...contact,
-                        idBotConversa: contact.idBotConversa ? parseInt(contact.idBotConversa) : undefined,
-                        dtaAbertura: contact.dtaAbertura ? new Date(contact.dtaAbertura) : undefined,
-                        flaAtivo: contact.flaAtivo === "1",
+                        ...rest,
+                        flaAtivo: flaAtivo === "1",
+                        idBotConversa: idBotConversa ? parseInt(idBotConversa) : undefined,
+                        idRepresentante: idRepresentante ? Number(idRepresentante) : undefined,
+                        IdOrigem: IdOrigem ? Number(IdOrigem) : undefined,
+                        dtaAbertura: dtaAbertura ? new Date(dtaAbertura) : undefined,
+                        dtaAlteracao: new Date(),
                     },
                 });
 
@@ -172,7 +176,7 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                     });
                     if (existing) {
                         await prisma.cRM_Contato_Endereco.update({
-                            where: { idContatoEndereco: existing.idContatoEndereco },
+                            where: { IdContatoEndereco: existing.IdContatoEndereco },
                             data: address,
                         });
                     } else {

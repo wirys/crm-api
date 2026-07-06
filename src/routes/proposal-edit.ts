@@ -132,7 +132,8 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
                 PrecoKg         = ISNULL(t2.PrecoKg, 0),
                 ValorEmbalagem  = ISNULL(t2.ValorEmbalagem, 0),
-                IPI             = ISNULL(t2.IPI, 0)
+                IPI             = ISNULL(t2.IPI, 0),
+                Unidade         = ISNULL(t2.Unidade, '')
             FROM CRM_Proposta_Detalhe AS t1
             LEFT OUTER JOIN CRM_Produto_Material AS t2 ON t1.idMaterial = t2.idMaterial AND t1.idMaterial > 0
             LEFT OUTER JOIN CRM_Proposta_Etapa AS e ON t1.idEtapa = e.idEtapa
