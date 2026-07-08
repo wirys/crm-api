@@ -1,19 +1,26 @@
 import { Elysia, t } from "elysia";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
+import { getUserContext } from "../lib/user-context";
 export const activitiesRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefix: '/atividades' })
-    .get("/", async ({ query }) => {
+    .get("/", async ({ query, request }) => {
         try {
+            const { userId, isAdmin } = getUserContext(request);
+
             // Parse filter parameters
             const idStatusAtividade = query.idStatusAtividade?.split(',').filter(id => id !== '0').map(Number) || [];
             const idContato = query.idContato?.split(',').filter(id => id !== '0').map(Number) || [];
             const idOrigem = query.idOrigem?.split(',').filter(id => id !== '0').map(Number) || [];
             const idTipoAtividade = query.idTipoAtividade?.split(',').filter(id => id !== '0').map(Number) || [];
             const idRepresentanteGerou = query.idRepresentanteGerou?.split(',').filter(id => id !== '0').map(Number) || [];
-            const idRepresentante = query.idRepresentante?.split(',').filter(id => id !== '0').map(Number) || [];
+            let idRepresentante = query.idRepresentante?.split(',').filter(id => id !== '0').map(Number) || [];
             const idStatus = query.idStatus?.split(',').filter(id => id !== '0').map(Number) || [];
             const dtaInicio = query.dtaInicio || null;
             const dtaFim = query.dtaFim || null;
+
+            if (!isAdmin && userId > 0) {
+                idRepresentante = [userId];
+            }
 
             // Build Raw SQL conditions
             const conditions: Prisma.Sql[] = [];

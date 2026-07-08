@@ -106,6 +106,11 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
 
             console.log(`[auth] login ok idUsuario=${user.idUsuario} email=${user.Email}`);
 
+            prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_Log (idUsuario, Data, Atividade, Ocorrencia)
+                VALUES (${Number(user.idUsuario)}, GETDATE(), 'Login', 'Login realizado - ${(user.Email || "").replace(/'/g, "''")}')
+            `).catch(e => console.error("[action-logger] login log failed", e));
+
             return {
                 token,
                 user: {

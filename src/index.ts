@@ -30,12 +30,15 @@ import { comprasRoutes, fornecedorRoutes } from "./routes/compras";
 import { ocorrenciasRoutes } from "./routes/ocorrencias";
 import { adminRoutes } from "./routes/admin";
 import { feriadosRoutes } from "./routes/feriados";
+import { followupRoutes } from "./routes/followup";
+import { actionLogger } from "./lib/action-logger";
 
 const {URL, PORT} = Bun.env;
 
 
 export const app = new Elysia()
   .use(cors())
+  .use(actionLogger)
   .get('/', ({ redirect }) => redirect('/docs'), { detail: { hide: true } })
   .use(stockRoutes)
   .use(authRoutes)
@@ -72,6 +75,7 @@ export const app = new Elysia()
     .use(ocorrenciasRoutes)
     .use(adminRoutes)
     .use(feriadosRoutes)
+    .use(followupRoutes)
   .use(openapi({
         path: '/docs',
         documentation: {

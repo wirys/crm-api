@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
+import { getUserContext } from "../lib/user-context";
 
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -68,12 +69,17 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             orderBy: { Nome: "asc" },
         });
     })
-    .get("/", async ({ query }) => {
+    .get("/", async ({ query, request }) => {
+        const { userId, isAdmin } = getUserContext(request);
         const { representatives } = query;
 
-        const repIds = representatives
+        let repIds = representatives
             ? representatives.split(",").map((id: string) => parseInt(id)).filter((id: number) => !isNaN(id) && id > 0)
             : [];
+
+        if (!isAdmin && userId > 0) {
+            repIds = [userId];
+        }
 
         const whereClause = repIds.length > 0
             ? `WHERE t1.idRepresentante IN (${repIds.join(",")})`

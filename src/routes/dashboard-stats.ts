@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
+import { getUserContext } from "../lib/user-context";
 
 function conv(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -18,7 +19,13 @@ function conv(obj: any): any {
 export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }, prefix: "/dashboard-stats" })
 
     // ── GET /dashboard-stats/overview ─────────────────────────────────────────
-    .get("/overview", async () => {
+    .get("/overview", async ({ request }) => {
+        const { userId, isAdmin } = getUserContext(request);
+        const repFilter = !isAdmin && userId > 0;
+        const repJoinProposta = repFilter ? `JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato AND c.idRepresentante = ${userId}` : "";
+        const repWhereContato = repFilter ? `AND t1.idRepresentante = ${userId}` : "";
+        const repJoinAtividade = repFilter ? `JOIN CRM_Contato c WITH (NOLOCK) ON cu.idContato = c.idContato AND c.idRepresentante = ${userId}` : "";
+
         const [
             totalPropostasRows,
             totalContatosRows,
@@ -26,14 +33,15 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             atividadesHojeRows,
             atividadesVencidasRows,
         ] = await Promise.all([
-            prisma.$queryRawUnsafe(`SELECT Total = COUNT(*) FROM CRM_Proposta WITH (NOLOCK)`),
+            prisma.$queryRawUnsafe(`SELECT Total = COUNT(*) FROM CRM_Proposta p WITH (NOLOCK) ${repJoinProposta}`),
             prisma.$queryRawUnsafe(`
                 SELECT Total = COUNT(*)
-                FROM CRM_Contato WITH (NOLOCK)
+                FROM CRM_Contato t1 WITH (NOLOCK)
                 WHERE idStatus NOT IN (
                     SELECT idStatus FROM CRM_Proposta_Status WITH (NOLOCK)
                     WHERE Status IN ('Lixeira', 'Excluído', 'Deletado')
                 )
+                ${repWhereContato}
             `),
             prisma.$queryRawUnsafe(`
                 SELECT
@@ -44,19 +52,22 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
                     Valor    = SUM(ISNULL(p.TotalValor, 0))
                 FROM CRM_Proposta p WITH (NOLOCK)
                 LEFT JOIN CRM_Proposta_Status s WITH (NOLOCK) ON p.idStatus = s.idStatus
+                ${repJoinProposta}
                 GROUP BY p.idStatus, s.Status, s.CorHTML
                 ORDER BY Total DESC
             `),
             prisma.$queryRawUnsafe(`
                 SELECT Total = COUNT(*)
-                FROM CRM_ContatoUpdate WITH (NOLOCK)
-                WHERE CAST(dtaProximoContato AS DATE) = CAST(GETDATE() AS DATE)
+                FROM CRM_ContatoUpdate cu WITH (NOLOCK)
+                ${repJoinAtividade}
+                WHERE CAST(cu.dtaProximoContato AS DATE) = CAST(GETDATE() AS DATE)
             `),
             prisma.$queryRawUnsafe(`
                 SELECT Total = COUNT(*)
-                FROM CRM_ContatoUpdate WITH (NOLOCK)
-                WHERE dtaProximoContato < GETDATE()
-                  AND CAST(dtaProximoContato AS DATE) < CAST(GETDATE() AS DATE)
+                FROM CRM_ContatoUpdate cu WITH (NOLOCK)
+                ${repJoinAtividade}
+                WHERE cu.dtaProximoContato < GETDATE()
+                  AND CAST(cu.dtaProximoContato AS DATE) < CAST(GETDATE() AS DATE)
             `),
         ]);
 
@@ -70,23 +81,32 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
     })
 
     // ── GET /dashboard-stats/propostas-por-mes ────────────────────────────────
-    .get("/propostas-por-mes", async () => {
+    .get("/propostas-por-mes", async ({ request }) => {
+        const { userId, isAdmin } = getUserContext(request);
+        const repJoin = !isAdmin && userId > 0
+            ? `JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato AND c.idRepresentante = ${userId}`
+            : "";
         const rows: any[] = await prisma.$queryRawUnsafe(`
             SELECT
-                Ano   = YEAR(dtaCriacao),
-                Mes   = MONTH(dtaCriacao),
+                Ano   = YEAR(p.dtaCriacao),
+                Mes   = MONTH(p.dtaCriacao),
                 Total = COUNT(*),
-                Valor = SUM(ISNULL(TotalValor, 0))
-            FROM CRM_Proposta WITH (NOLOCK)
-            WHERE dtaCriacao >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
-            GROUP BY YEAR(dtaCriacao), MONTH(dtaCriacao)
+                Valor = SUM(ISNULL(p.TotalValor, 0))
+            FROM CRM_Proposta p WITH (NOLOCK)
+            ${repJoin}
+            WHERE p.dtaCriacao >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+            GROUP BY YEAR(p.dtaCriacao), MONTH(p.dtaCriacao)
             ORDER BY Ano, Mes
         `);
         return conv(rows);
     })
 
     // ── GET /dashboard-stats/representantes ───────────────────────────────────
-    .get("/representantes", async () => {
+    .get("/representantes", async ({ request }) => {
+        const { userId, isAdmin } = getUserContext(request);
+        const repWhere = !isAdmin && userId > 0
+            ? `WHERE c.idRepresentante = ${userId}`
+            : "";
         const rows: any[] = await prisma.$queryRawUnsafe(`
             SELECT TOP 10
                 u.idUsuario,
@@ -96,6 +116,7 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             FROM CRM_Proposta p WITH (NOLOCK)
             JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato
             JOIN CRM_Usuario u WITH (NOLOCK) ON c.idRepresentante = u.idUsuario
+            ${repWhere}
             GROUP BY u.idUsuario, u.Nome
             ORDER BY SUM(ISNULL(p.TotalValor, 0)) DESC
         `);
@@ -103,11 +124,16 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
     })
 
     // ── GET /dashboard-stats/consolidado ─────────────────────────────────────
-    .get("/consolidado", async ({ query }) => {
+    .get("/consolidado", async ({ query, request }) => {
+        const { userId, isAdmin } = getUserContext(request);
         const { idUsuario, ano, mes } = query as Record<string, string | undefined>;
 
         const conds: string[] = [];
-        if (idUsuario) conds.push(`idUsuario = ${Number(idUsuario)}`);
+        if (!isAdmin && userId > 0) {
+            conds.push(`idUsuario = ${userId}`);
+        } else if (idUsuario) {
+            conds.push(`idUsuario = ${Number(idUsuario)}`);
+        }
         if (ano)       conds.push(`YEAR(dtaReferencia) = ${Number(ano)}`);
         if (mes)       conds.push(`MONTH(dtaReferencia) = ${Number(mes)}`);
 
