@@ -31,6 +31,7 @@ import { ocorrenciasRoutes } from "./routes/ocorrencias";
 import { adminRoutes } from "./routes/admin";
 import { feriadosRoutes } from "./routes/feriados";
 import { followupRoutes } from "./routes/followup";
+import { perfisRoutes } from "./routes/perfis";
 import { actionLogger } from "./lib/action-logger";
 
 const {URL, PORT} = Bun.env;
@@ -76,6 +77,7 @@ export const app = new Elysia()
     .use(adminRoutes)
     .use(feriadosRoutes)
     .use(followupRoutes)
+    .use(perfisRoutes)
   .use(openapi({
         path: '/docs',
         documentation: {

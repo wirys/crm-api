@@ -130,4 +130,85 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
                 password: t.String(),
             }),
         }
+    )
+    .post(
+        "/impersonate",
+        async ({ body, jwt, set, request }) => {
+            const SUPER_ADMIN_GROUPS = new Set([1, 2, 3]);
+
+            const adminId = Number(request.headers.get("x-user-id") || 0);
+            const adminGroup = Number(request.headers.get("x-user-group") || 0);
+
+            if (!adminId || !SUPER_ADMIN_GROUPS.has(adminGroup)) {
+                set.status = 403;
+                return { message: "Apenas super administradores podem usar esta função." };
+            }
+
+            const targetId = Number(body.idUsuario);
+            if (!targetId || targetId === adminId) {
+                set.status = 400;
+                return { message: "ID de usuário inválido." };
+            }
+
+            const users = await prisma.$queryRawUnsafe<any[]>(`
+                SELECT TOP 1
+                    idUsuario, idGrupo,
+                    LTRIM(RTRIM(Nome)) AS Nome,
+                    LTRIM(RTRIM(Email)) AS Email,
+                    LTRIM(RTRIM(ISNULL(Imagem, ''))) AS Imagem,
+                    flaAtivo
+                FROM CRM_Usuario WITH (NOLOCK)
+                WHERE idUsuario = ${targetId}
+            `);
+
+            const user = users?.[0];
+            if (!user) {
+                set.status = 404;
+                return { message: "Usuário não encontrado." };
+            }
+
+            const idGrupo = Number(user.idGrupo || 0);
+            const authorizedLevel = [1, 2, 5, 7].includes(idGrupo) ? 1 : 2;
+
+            let groupName = "";
+            try {
+                const group = await prisma.cRM_Grupo.findUnique({ where: { idGrupo } });
+                groupName = group?.Grupo?.trim() || "";
+            } catch {}
+
+            const token = await jwt.sign({
+                idUsuario: Number(user.idUsuario),
+                idGrupo,
+                UsuarioNome: user.Nome || "",
+                UsuarioGrupo: groupName,
+                UsuarioImagem: user.Imagem || "images/avatar/avatar.png",
+                email: user.Email,
+                Autorizado: authorizedLevel,
+                impersonatedBy: adminId,
+            });
+
+            prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_Log (idUsuario, Data, Atividade, Ocorrencia)
+                VALUES (${adminId}, GETDATE(), 'Impersonate', 'Admin ${adminId} logou como usuário ${targetId} - ${(user.Nome || "").replace(/'/g, "''")}')
+            `).catch(e => console.error("[action-logger] impersonate log failed", e));
+
+            return {
+                token,
+                user: {
+                    id: Number(user.idUsuario),
+                    idGrupo,
+                    name: user.Nome,
+                    email: user.Email,
+                    avatar: user.Imagem,
+                    group: groupName,
+                    authorized: authorizedLevel,
+                    impersonatedBy: adminId,
+                },
+            };
+        },
+        {
+            body: t.Object({
+                idUsuario: t.Number(),
+            }),
+        }
     );

@@ -498,29 +498,33 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const { idMaterial, Quantidade, Desconto, MaterialDescricao, composicao, idEtapa } = body as any;
 
         if (composicao && composicao.idComposicao) {
-            // Produto com composição: insere 1 pai (idMaterial=0) + N filhos
             const idComposicao = Number(composicao.idComposicao);
-            const desc = String(MaterialDescricao || '').replace(/'/g, "''");
+            const etapa = Number(idEtapa || 0);
+            const qtd = Number(Quantidade);
 
-            // Registro pai
-            await prisma.$queryRawUnsafe(`
-                INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-                VALUES (${id}, 0, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${desc}', ${Number(idEtapa || 0)}, ${idComposicao}, 0, 0, 0, 0, 0)
-            `);
+            // Get next idComposicaoDetalhe (same as old CRM)
+            const maxRes: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idComposicaoDetalhe = ISNULL(MAX(idComposicaoDetalhe), 0) FROM CRM_Proposta_Detalhe WHERE idProposta = ${id} AND idComposicao = ${idComposicao}`
+            );
+            const nextCompDetalhe = Number(maxRes[0]?.idComposicaoDetalhe ?? 0) + 1;
 
-            // Registros filhos (cada material da composição)
-            for (const mat of composicao.materiais) {
-                const matDesc = String(mat.nomMaterial || '').replace(/'/g, "''");
+            // Fetch composition materials from catalog
+            const compMats: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idMaterial FROM CRM_Produto_ComposicaoMaterial WHERE idComposicao = ${idComposicao}`
+            );
+
+            for (const mat of compMats) {
+                const matId = Number(mat.idMaterial);
                 await prisma.$queryRawUnsafe(`
-                    INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-                    VALUES (${id}, ${Number(mat.idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${matDesc}', ${Number(idEtapa || 0)}, 0, ${idComposicao}, 0, 0, 0, 0)
+                    INSERT INTO CRM_Proposta_Detalhe (idComposicaoDetalhe, idEtapa, idComposicao, idProposta, idMaterial, Quantidade, Desconto)
+                    VALUES (${nextCompDetalhe}, ${etapa}, ${idComposicao}, ${id}, ${matId}, ${qtd}, NULL)
                 `);
             }
         } else {
-            // Produto simples
+            const etapa = Number(idEtapa || 0);
             await prisma.$queryRawUnsafe(`
-                INSERT INTO CRM_Proposta_Detalhe (idProposta, idMaterial, Quantidade, Desconto, MaterialDescricao, idEtapa, idComposicao, idComposicaoDetalhe, OrdemMaterial, OrdemComposicao, OrdemGrupo, OrdemEtapa)
-                VALUES (${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, ${Number(Desconto || 0)}, '${String(MaterialDescricao || '').replace(/'/g, "''")}', ${Number(idEtapa || 0)}, 0, 0, 0, 0, 0, 0)
+                INSERT INTO CRM_Proposta_Detalhe (idEtapa, idComposicao, idProposta, idMaterial, Quantidade, Desconto)
+                VALUES (${etapa}, NULL, ${id}, ${Number(idMaterial)}, ${Number(Quantidade)}, NULL)
             `);
         }
 
@@ -583,5 +587,48 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             );
         }
         await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
+        return { success: true };
+    })
+    .get("/:id/detalhe", async ({ params }) => {
+        const id = Number(params.id);
+        const prop: any[] = await prisma.$queryRawUnsafe(
+            `SELECT PropostaNo FROM CRM_Proposta WHERE idProposta = ${id}`
+        );
+        if (!prop.length || !prop[0].PropostaNo) return { rows: [], summary: null };
+        const propostaNo = prop[0].PropostaNo;
+
+        const results: any[] = await prisma.$queryRawUnsafe(
+            `EXEC sp_CRMPropostaDetalhe @PropostaNo = '${propostaNo}'`
+        );
+        const rows = convertBigIntToNumber(results);
+        if (!rows.length) return { rows: [], summary: null };
+
+        const last = rows[rows.length - 1];
+        const summary = {
+            TotalQuantidade: Number(last.TotalQuantidade ?? 0),
+            TotalIPIValor: Number(last.TotalIPIValor ?? 0),
+            TotalGeral: Number(last.TotalGeral ?? 0),
+            TotalKgGeral: Number(last.TotalKgGeral ?? 0),
+            ValorFrete: Number(last.Valor ?? 0),
+            ValorOutros: Number(last.ValorOutros ?? 0),
+            idOutros: Number(last.idOutros ?? 0),
+            Outros: last.Outros || "",
+        };
+
+        return { rows, summary };
+    })
+    .patch("/:id/detalhe/material", async ({ params, body }) => {
+        const { idPropostaDetalhe, field, value } = body as any;
+        const id = Number(idPropostaDetalhe);
+        const allowed = ["CodMaterial", "PesoEmbalagem", "MaterialDescricao"];
+        if (!allowed.includes(field)) return { error: "Campo não permitido" };
+
+        const safeVal = field === "PesoEmbalagem"
+            ? Number(value)
+            : `'${String(value).replace(/'/g, "''")}'`;
+        const col = field === "MaterialDescricao" ? "MaterialDescricao" : field;
+        await prisma.$queryRawUnsafe(
+            `UPDATE CRM_Proposta_Detalhe SET ${col} = ${safeVal} WHERE idPropostaDetalhe = ${id}`
+        );
         return { success: true };
     });
