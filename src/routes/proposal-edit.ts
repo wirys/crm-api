@@ -440,7 +440,19 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
 
         return { PropostaNo: propostaNo };
     }, {
-        body: t.Object({ amostra: t.Optional(t.Number()) })
+        body: t.Object({
+            amostra: t.Optional(t.Number()),
+            Desconto: t.Optional(t.Number()),
+            idDifal: t.Optional(t.Number()),
+            FundoPobreza: t.Optional(t.Number()),
+            CalculaDifal: t.Optional(t.Number()),
+            Possibilidade: t.Optional(t.Number()),
+            GanhoEstimado: t.Optional(t.Number()),
+            DataPossivel: t.Optional(t.String()),
+            dtaValidade: t.Optional(t.String()),
+            idCondicaoPagamento: t.Optional(t.Number()),
+            idFrete: t.Optional(t.Number()),
+        })
     })
     // ── POST /condicoes-pagamento  — cadastrar nova condição ──────────────────
     .post("/condicoes-pagamento", async ({ body, set }) => {

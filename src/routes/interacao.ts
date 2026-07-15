@@ -1,86 +1,73 @@
-import { Elysia, t } from 'elysia';
-import { join } from 'path';
-import { writeFileSync, readFileSync, mkdirSync } from 'fs';
-import { existsSync } from 'fs';
-import {prisma} from "../lib/prisma";
+import { Elysia } from 'elysia';
+import { prisma } from "../lib/prisma";
+import { uploadToS3, getSignedDownloadUrl, getSignedViewUrl, deleteFromS3 } from "../lib/s3";
 
-function convertBigInt(obj: any): any {
-    if (typeof obj === "bigint") {
-        return obj.toString();
-    }
-    if (Array.isArray(obj)) {
-        return obj.map(convertBigInt);
-    }
-    if (obj !== null && typeof obj === "object") {
-        return Object.fromEntries(
-            Object.entries(obj).map(([key, value]) => [key, convertBigInt(value)])
-        );
+function conv(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === "bigint") return Number(obj);
+    if (obj instanceof Date) return obj;
+    if (Array.isArray(obj)) return obj.map(conv);
+    if (typeof obj === "object") {
+        if (typeof obj.toNumber === "function") return obj.toNumber();
+        const out: any = {};
+        for (const k in obj) out[k] = conv(obj[k]);
+        return out;
     }
     return obj;
 }
 
-// Rotas de Atividade Tipo
+// ── Atividade Tipo ───────────────────────────────────────────────────────────
 export const atividadeTipoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/atividadeTipo" })
     .get("/", async () => {
         try {
             const tipos = await prisma.$queryRaw`
-                SELECT id, AtividadeTipo 
-                FROM CRM_AtividadeTipo 
-                ORDER BY AtividadeTipo
+                SELECT id, AtividadeTipo FROM CRM_AtividadeTipo ORDER BY AtividadeTipo
             `;
-
-            return {
-                status: 200,
-                data: convertBigInt(tipos),
-            };
+            return { status: 200, data: conv(tipos) };
         } catch (error) {
             console.error("Erro ao buscar tipos de atividade:", error);
             return { status: 400, data: [], error };
         }
     });
 
-// Rotas de Atividade Status
+// ── Atividade Status ─────────────────────────────────────────────────────────
 export const atividadeStatusRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/atividadeStatus" })
     .get("/", async ({ query }) => {
         const idTipo = query.idTipo as string;
-
         try {
             const status = await prisma.$queryRaw`
                 SELECT id, AtividadeStatus, idAtividadeTipo
-                FROM CRM_AtividadeStatus 
+                FROM CRM_AtividadeStatus
                 WHERE idAtividadeTipo = ${parseInt(idTipo)}
                 ORDER BY AtividadeStatus
             `;
-
-            return {
-                status: 200,
-                data: convertBigInt(status),
-            };
+            return { status: 200, data: conv(status) };
         } catch (error) {
             console.error("Erro ao buscar status de atividade:", error);
             return { status: 400, data: [], error };
         }
     });
 
-// Rotas de Interação
+// ── Interações ───────────────────────────────────────────────────────────────
 export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/interacao" })
-    // GET - Listar interações
     .get("/", async ({ query }) => {
         const idContato = query.idContato as string;
-
         try {
             const interacoes = await prisma.$queryRaw`
-                SELECT 
+                SELECT
                     t1.idContatoUpdate,
                     t1.UpdateContent,
                     t1.Valor,
                     t1.CreatedAt,
-                    usuario = ISNULL(t1.[User], ''),
-                    AtividadeTipo = ISNULL(t3.AtividadeTipo, ''),
+                    t1.idAtividadeTipo,
+                    t1.idAtividadeStatus,
+                    usuario     = ISNULL(t1.[User], ''),
+                    idUsuario   = ISNULL(t1.idUsuario, 0),
+                    AtividadeTipo   = ISNULL(t3.AtividadeTipo, ''),
                     AtividadeStatus = ISNULL(t2.AtividadeStatus, ''),
-                    dtaProximoContato = CASE 
-                        WHEN t1.dtaProximoContato <= '1901-01-01' THEN 'Não cadastrado'
-                        ELSE CONVERT(varchar, t1.dtaProximoContato, 106) + ' ' + CONVERT(varchar, t1.dtaProximoContato, 108)
+                    dtaProximoContato = CASE
+                        WHEN t1.dtaProximoContato IS NULL OR t1.dtaProximoContato <= '1901-01-01' THEN NULL
+                        ELSE t1.dtaProximoContato
                     END
                 FROM CRM_ContatoUpdate t1
                 LEFT JOIN CRM_AtividadeStatus t2 ON t1.idAtividadeStatus = t2.id
@@ -88,249 +75,168 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
                 WHERE t1.idContato = ${parseInt(idContato)}
                 ORDER BY t1.CreatedAt DESC
             `;
-
-            return {
-                status: 200,
-                data: convertBigInt(interacoes),
-            };
+            return { status: 200, data: conv(interacoes) };
         } catch (error) {
             console.error("Erro ao buscar interações:", error);
             return { status: 400, data: [], error };
         }
     })
 
-    // POST - Criar interação
     .post("/", async ({ body }) => {
-        const {
-            idContato,
-            idAtividadeTipo,
-            idAtividadeStatus,
-            conteudo,
-            prazo,
-            horario,
-            valor,
-        } = body as {
-            idContato: number;
-            idAtividadeTipo: number;
-            idAtividadeStatus: number;
-            conteudo: string;
-            prazo?: string;
-            horario?: string;
-            valor?: number;
-        };
-
+        const { idContato, idAtividadeTipo, idAtividadeStatus, conteudo, prazo, horario, valor, usuario, idUsuario } = body as any;
         try {
-            // Buscar nome do contato
-            const contato = await prisma.cRM_Contato.findUnique({
-                where: { idContato },
-                select: { nomContato: true },
-            });
+            const contato: any[] = await prisma.$queryRawUnsafe(
+                `SELECT nomContato FROM CRM_Contato WHERE idContato = ${Number(idContato)}`
+            );
+            if (!contato.length) return { status: 404, error: "Contato não encontrado" };
 
-            if (!contato) {
-                return { status: 404, error: "Contato não encontrado" };
+            let dtaProximo = "NULL";
+            if (prazo) {
+                const h = horario || "00:00";
+                dtaProximo = `'${prazo}T${h}'`;
             }
 
-            // Construir data/hora
-            let dtaProximoContato = null;
-            if (prazo && horario) {
-                dtaProximoContato = new Date(`${prazo}T${horario}`);
-            }
+            const content = String(conteudo || '').replace(/'/g, "''");
+            const user = String(usuario || 'User').replace(/'/g, "''");
+            const uid = Number(idUsuario || 1);
+            const vl = valor ? Number(valor) : "NULL";
 
-            // Criar interação
-            const interacao = await prisma.$executeRaw`
-                INSERT INTO CRM_ContatoUpdate (
-                    idContato,
-                    CreatedAt,
-                    UpdateContent,
-                    dtaProximoContato,
-                    ItemName,
-                    [User],
-                    idUsuario,
-                    idAtividadeStatus,
-                    idAtividadeTipo,
-                    Valor
-                ) VALUES (
-                    ${idContato},
-                    GETDATE(),
-                    ${conteudo},
-                    ${dtaProximoContato},
-                    ${contato.nomContato},
-                    'User',
-                    1,
-                    ${idAtividadeStatus},
-                    ${idAtividadeTipo},
-                    ${valor || null}
-                )
-            `;
+            await prisma.$queryRawUnsafe(`
+                INSERT INTO CRM_ContatoUpdate (idContato, CreatedAt, UpdateContent, dtaProximoContato, ItemName, [User], idUsuario, idAtividadeStatus, idAtividadeTipo, Valor)
+                VALUES (${Number(idContato)}, GETDATE(), '${content}', ${dtaProximo}, '${String(contato[0].nomContato).replace(/'/g, "''")}', '${user}', ${uid}, ${Number(idAtividadeStatus)}, ${Number(idAtividadeTipo)}, ${vl})
+            `);
 
-            return {
-                status: 201,
-                data: { success: true },
-            };
+            return { status: 201, data: { success: true } };
         } catch (error) {
             console.error("Erro ao criar interação:", error);
-            return { status: 400, error };
+            return { status: 400, error: String(error) };
         }
     })
 
-    // DELETE - Deletar interação
     .delete("/:id", async ({ params }) => {
         try {
-            await prisma.$executeRaw`
-                DELETE FROM CRM_ContatoUpdate 
-                WHERE idContatoUpdate = ${parseInt(params.id)}
-            `;
-
-            return { status: 200, message: "Interação deletada com sucesso" };
+            await prisma.$executeRaw`DELETE FROM CRM_ContatoUpdate WHERE idContatoUpdate = ${parseInt(params.id)}`;
+            return { status: 200, message: "Interação deletada" };
         } catch (error) {
             console.error("Erro ao deletar interação:", error);
             return { status: 400, error };
         }
     });
 
-// Rotas de Arquivo
+// ── Arquivos (S3) ────────────────────────────────────────────────────────────
 export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix: "/arquivos" })
-    // GET - Listar arquivos
     .get("/", async ({ query }) => {
         const idContato = query.idContato as string;
-
         try {
-            const arquivos = await prisma.$queryRaw`
-                SELECT 
-                    id,
-                    ArquivoNome,
-                    dtaCriacao
+            const arquivos: any[] = await prisma.$queryRaw`
+                SELECT id, idContato, ArquivoNome, ArquivoTipo, CaminhoArquivo, dtaCriacao, idUsuario
                 FROM CRM_ContatoArquivo
                 WHERE idContato = ${parseInt(idContato)}
                 ORDER BY dtaCriacao DESC
             `;
 
-            return {
-                status: 200,
-                data: convertBigInt(arquivos),
-            };
+            const result = [];
+            for (const arq of conv(arquivos)) {
+                const key = arq.CaminhoArquivo || '';
+                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(arq.ArquivoNome || '');
+                let thumbnailUrl = null;
+                let viewUrl = null;
+
+                try {
+                    if (isImage && key) {
+                        thumbnailUrl = await getSignedViewUrl(key, arq.ArquivoTipo || 'image/jpeg');
+                        viewUrl = thumbnailUrl;
+                    }
+                } catch { /* S3 key may not exist yet */ }
+
+                result.push({
+                    ...arq,
+                    isImage,
+                    thumbnailUrl,
+                    viewUrl,
+                });
+            }
+
+            return { status: 200, data: result };
         } catch (error) {
             console.error("Erro ao buscar arquivos:", error);
             return { status: 400, data: [], error };
         }
     })
 
-    // POST - Upload de arquivo
-    .post("/upload", async ({ body }) => {
+    .post("/upload", async ({ body, set }) => {
         try {
-            const { idContato, files } = body as any;
+            const formData = body as any;
+            const idContato = Number(formData.idContato);
+            const idUsuario = Number(formData.idUsuario || 1);
+            const files = formData.files;
 
-            // Criar diretório se não existir
-            const uploadDir = join(process.cwd(), "public", "uploads", "contatos");
-            if (!existsSync(uploadDir)) {
-                mkdirSync(uploadDir, { recursive: true });
+            if (!idContato || !files) {
+                set.status = 400;
+                return { error: "idContato e files são obrigatórios" };
             }
 
-            const uploadedFiles = [];
+            const fileList = Array.isArray(files) ? files : [files];
+            const uploaded = [];
 
-            for (const file of files) {
-                // Gerar nome único
-                const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${file.name}`;
-                const filePath = join(uploadDir, uniqueName);
+            for (const file of fileList) {
+                const originalName = file.name || 'arquivo';
+                const contentType = file.type || 'application/octet-stream';
+                const ext = originalName.includes('.') ? '.' + originalName.split('.').pop() : '';
+                const s3Key = `contatos/${idContato}/${crypto.randomUUID()}${ext}`;
 
-                // Salvar arquivo
-                writeFileSync(filePath, file.data);
+                const arrayBuffer = await file.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
 
-                // Salvar no banco
-                await prisma.$executeRaw`
-                    INSERT INTO CRM_ContatoArquivo (
-                        idContato,
-                        ArquivoNome,
-                        ArquivoTipo,
-                        CaminhoArquivo,
-                        dtaCriacao,
-                        idUsuario
-                    ) VALUES (
-                        ${parseInt(idContato)},
-                        ${file.name},
-                        ${file.type},
-                        ${uniqueName},
-                        GETDATE(),
-                        1
-                    )
-                `;
+                await uploadToS3(s3Key, buffer, contentType);
 
-                uploadedFiles.push({
-                    name: file.name,
-                    path: uniqueName,
-                });
+                await prisma.$queryRawUnsafe(`
+                    INSERT INTO CRM_ContatoArquivo (idContato, ArquivoNome, ArquivoTipo, CaminhoArquivo, dtaCriacao, idUsuario)
+                    VALUES (${idContato}, '${originalName.replace(/'/g, "''")}', '${contentType}', '${s3Key}', GETDATE(), ${idUsuario})
+                `);
+
+                uploaded.push({ name: originalName, key: s3Key });
             }
 
-            return {
-                status: 201,
-                data: { uploadedFiles },
-            };
+            return { status: 201, data: { uploaded } };
         } catch (error) {
             console.error("Erro ao fazer upload:", error);
-            return { status: 400, error };
+            return { status: 400, error: String(error) };
         }
     })
 
-    // GET - Download de arquivo
-    .get("/download/:id", async ({ params }) => {
+    .get("/download/:id", async ({ params, set }) => {
         try {
-            const arquivo = await prisma.$queryRaw<any[]>`
+            const arquivo: any[] = await prisma.$queryRaw`
                 SELECT ArquivoNome, CaminhoArquivo, ArquivoTipo
                 FROM CRM_ContatoArquivo
                 WHERE id = ${parseInt(params.id)}
             `;
+            if (!arquivo.length) { set.status = 404; return { error: "Arquivo não encontrado" }; }
 
-            if (!arquivo || arquivo.length === 0) {
-                return { status: 404, error: "Arquivo não encontrado" };
-            }
-
-            const file = arquivo[0] as any;
-            const filePath = join(process.cwd(), "public", "uploads", "contatos", file.CaminhoArquivo);
-
-            if (!existsSync(filePath)) {
-                return { status: 404, error: "Arquivo não encontrado no servidor" };
-            }
-
-            const fileData = readFileSync(filePath);
-
-            return new Response(fileData, {
-                headers: {
-                    "Content-Type": file.ArquivoTipo,
-                    "Content-Disposition": `attachment; filename="${file.ArquivoNome}"`,
-                },
-            });
+            const f = arquivo[0] as any;
+            const url = await getSignedDownloadUrl(f.CaminhoArquivo, f.ArquivoNome);
+            return { url };
         } catch (error) {
-            console.error("Erro ao fazer download:", error);
-            return { status: 400, error };
+            console.error("Erro ao gerar download:", error);
+            return { status: 400, error: String(error) };
         }
     })
 
-    // DELETE - Deletar arquivo
     .delete("/:id", async ({ params }) => {
         try {
-            const arquivo = await prisma.$queryRaw<any[]>`
-                SELECT CaminhoArquivo
-                FROM CRM_ContatoArquivo
-                WHERE id = ${parseInt(params.id)}
+            const arquivo: any[] = await prisma.$queryRaw`
+                SELECT CaminhoArquivo FROM CRM_ContatoArquivo WHERE id = ${parseInt(params.id)}
             `;
-
-            if (arquivo && arquivo.length > 0) {
-                const file = arquivo[0] as any;
-                const filePath = join(process.cwd(), "public", "uploads", "contatos", file.CaminhoArquivo);
-
-                if (existsSync(filePath)) {
-                    // Deletar arquivo
-                    // unlinkSync(filePath); // Comentado para não deletar arquivos
+            if (arquivo.length) {
+                const key = (arquivo[0] as any).CaminhoArquivo;
+                if (key) {
+                    try { await deleteFromS3(key); } catch { /* file may not exist in S3 */ }
                 }
             }
 
-            // Deletar registro do banco
-            await prisma.$executeRaw`
-                DELETE FROM CRM_ContatoArquivo
-                WHERE id = ${parseInt(params.id)}
-            `;
-
-            return { status: 200, message: "Arquivo deletado com sucesso" };
+            await prisma.$executeRaw`DELETE FROM CRM_ContatoArquivo WHERE id = ${parseInt(params.id)}`;
+            return { status: 200, message: "Arquivo deletado" };
         } catch (error) {
             console.error("Erro ao deletar arquivo:", error);
             return { status: 400, error };
