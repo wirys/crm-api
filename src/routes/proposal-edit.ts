@@ -368,22 +368,28 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         }
 
         // ── 2. Lê imposto e desconto do banco (já atualizado) ─────────────────
-        const prop: any[] = await prisma.$queryRawUnsafe(`
+        const propRaw: any[] = await prisma.$queryRawUnsafe(`
             SELECT
                 p.Desconto,
+                p.FundoPobreza,
+                p.CalculaDifal,
+                p.Possibilidade,
+                p.GanhoEstimado,
                 p.DataPossivel,
+                p.PropostaNo,
                 imposto = ISNULL(d.AliqEst * 100, 0)
             FROM CRM_Proposta p
             LEFT JOIN CRM_Proposta_Difal d ON p.idDifal = d.idDifal
             WHERE p.idProposta = ${id}
         `);
-        if (!prop.length) return { error: "Proposta não encontrada" };
+        if (!propRaw.length) return { error: "Proposta não encontrada" };
 
-        const row         = prop[0];
+        const row         = convertBigIntToNumber(propRaw[0]);
         const descontoPct = Math.round(Number(row.Desconto || 0) * 100);
-        const imposto     = Number(row.imposto || 0);
+        const impostoRaw  = Number(row.imposto || 0);
+        const imposto     = Math.round(impostoRaw * 100) / 100;
 
-        // ── 3. Chama SP com até 3 tentativas ─────────────────────────────────
+        // ── 3. Chama SP (formato idêntico ao VBA) ────────────────────────────
         const extractCode = (spResult: any[]): string | null => {
             if (!spResult.length) return null;
             const r = convertBigIntToNumber(spResult[0]);
@@ -399,7 +405,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
                 const spResult: any[] = await prisma.$queryRawUnsafe(
-                    `EXEC sp_CRMGeraNoProposta @idProposta = ${id}, @Desconto = ${descontoPct}, @Imposto = '${imposto}', @Amostra = ${amostraFlag}`
+                    `EXEC sp_CRMGeraNoProposta @idProposta='${id}', @Desconto='${descontoPct}', @Imposto='${imposto}', @Amostra=${amostraFlag}`
                 );
                 propostaNo = extractCode(spResult);
                 if (propostaNo) break;
@@ -424,16 +430,31 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             return { error: "Não foi possível gerar o código. Tente novamente." };
         }
 
-        // ── 5. Persiste PropostaNo (replica 2º UPDATE do VBA) ────────────────
+        // ── 5. 2º UPDATE (idêntico ao VBA — salva PropostaNo + campos do form)
+        const descontoDb  = Number(row.Desconto || 0);
+        const fpDb        = Number(row.FundoPobreza || 0);
+        const difalDb     = Number(row.CalculaDifal || 0);
+        const possibDb    = row.Possibilidade !== null && row.Possibilidade !== undefined ? Number(row.Possibilidade) : "Null";
+        const ganhoDb     = row.GanhoEstimado !== null && row.GanhoEstimado !== undefined ? Number(row.GanhoEstimado) : "Null";
+        const dataPosDb   = row.DataPossivel || "";
+
         await prisma.$queryRawUnsafe(
-            `UPDATE CRM_Proposta SET PropostaNo = '${String(propostaNo).replace(/'/g, "''")}' WHERE idProposta = ${id}`
+            `UPDATE CRM_Proposta SET ` +
+            `FundoPobreza=${fpDb}, ` +
+            `PropostaNo='${String(propostaNo).replace(/'/g, "''")}', ` +
+            `Desconto=${descontoDb}, ` +
+            `CalculaDifal=${difalDb}, ` +
+            `Possibilidade=${possibDb}, ` +
+            `GanhoEstimado=${ganhoDb}, ` +
+            `DataPossivel='${dataPosDb}' ` +
+            `WHERE idProposta='${id}'`
         );
 
         // SP auxiliar para amostras
-        if (amostraFlag === 1 && row.DataPossivel) {
+        if (amostraFlag === 1 && dataPosDb) {
             try {
                 await prisma.$queryRawUnsafe(
-                    `EXEC CRM_AMOContatoUpdate @idProposta = ${id}, @dta = '${row.DataPossivel}', @idUsuario = 0`
+                    `EXEC CRM_AMOContatoUpdate @idProposta=${id}, @dta='${dataPosDb}', @idUsuario=0`
                 );
             } catch { /* não bloqueia o fluxo principal */ }
         }
