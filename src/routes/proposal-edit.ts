@@ -17,6 +17,21 @@ function convertBigIntToNumber(obj: any): any {
     return obj;
 }
 
+const CHECAGEM_GROUPS = new Set([1, 2, 3, 4, 5, 7]);
+
+async function checkProposalLocked(id: number, request: Request): Promise<string | null> {
+    const userGroup = Number(request.headers.get("x-user-group") || 0);
+    if (CHECAGEM_GROUPS.has(userGroup)) return null;
+
+    const rows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
+    );
+    if (!rows.length) return "Proposta não encontrada";
+    const status = Number(rows[0].idStatus);
+    if (status >= 2) return "Proposta em checagem. Apenas usuários com permissão de checagem podem editar.";
+    return null;
+}
+
 export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, prefix: "/proposal-edit" })
     .get("/:id", async ({ params }) => {
         const id = Number(params.id);
@@ -303,8 +318,10 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Etapa WHERE idEtapa = ${Number(params.idEtapa)}`);
         return { success: true };
     }, { params: t.Object({ idEtapa: t.String() }) })
-    .put("/:id", async ({ params, body }) => {
+    .put("/:id", async ({ params, body, request, set }) => {
         const id = Number(params.id);
+        const locked = await checkProposalLocked(id, request);
+        if (locked) { set.status = 403; return { error: locked }; }
         const {
             idDifal, CalculaDifal, Desconto, idFrete, idCondicaoPagamento, Observacao, ObsChecagem,
             Possibilidade, GanhoEstimado, DataPossivel, dtaValidade, Area, ValorM2, FundoPobreza,
@@ -335,8 +352,10 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         await prisma.$queryRawUnsafe(`UPDATE CRM_Proposta SET ${sets.join(", ")} WHERE idProposta = ${id}`);
         return { success: true };
     })
-    .put("/:id/generate-code", async ({ params, body }) => {
+    .put("/:id/generate-code", async ({ params, body, request, set }) => {
         const id = Number(params.id);
+        const locked = await checkProposalLocked(id, request);
+        if (locked) { set.status = 403; return { error: locked }; }
         const {
             amostra,
             // Valores atuais do formulário — elimina race condition do debounce
@@ -526,8 +545,10 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         });
     })
 
-    .post("/:id/items", async ({ params, body }) => {
+    .post("/:id/items", async ({ params, body, request, set }) => {
         const id = Number(params.id);
+        const locked = await checkProposalLocked(id, request);
+        if (locked) { set.status = 403; return { error: locked }; }
         const { idMaterial, Quantidade, Desconto, MaterialDescricao, composicao, idEtapa } = body as any;
 
         if (composicao && composicao.idComposicao) {
@@ -564,9 +585,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         return { success: true };
     })
     // ── PATCH /:id/items/:itemId  — editar Quantidade / Desconto ──
-    .patch("/:id/items/:itemId", async ({ params, body, set }) => {
+    .patch("/:id/items/:itemId", async ({ params, body, set, request }) => {
         const itemId   = Number(params.itemId);
         const propId   = Number(params.id);
+        const locked = await checkProposalLocked(propId, request);
+        if (locked) { set.status = 403; return { error: locked }; }
         const { Quantidade, Desconto, idEtapa } = body as any;
 
         const sets: string[] = [];
@@ -607,8 +630,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         params: t.Object({ id: t.String(), itemId: t.String() }),
     })
 
-    .delete("/:id/items/:itemId", async ({ params }) => {
+    .delete("/:id/items/:itemId", async ({ params, request, set }) => {
         const itemId = Number(params.itemId);
+        const propId = Number(params.id);
+        const locked = await checkProposalLocked(propId, request);
+        if (locked) { set.status = 403; return { error: locked }; }
         // Verifica se o item é pai de composição (idMaterial=0, idComposicao>0)
         const row: any[] = await prisma.$queryRawUnsafe(
             `SELECT idMaterial, idComposicao FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
@@ -650,7 +676,10 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
 
         return { rows, summary };
     })
-    .patch("/:id/detalhe/material", async ({ params, body }) => {
+    .patch("/:id/detalhe/material", async ({ params, body, request, set }) => {
+        const propId = Number(params.id);
+        const locked = await checkProposalLocked(propId, request);
+        if (locked) { set.status = 403; return { error: locked }; }
         const { idPropostaDetalhe, field, value } = body as any;
         const id = Number(idPropostaDetalhe);
         const allowed = ["CodMaterial", "PesoEmbalagem", "MaterialDescricao"];

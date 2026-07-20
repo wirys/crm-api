@@ -94,8 +94,19 @@ export const proposalsRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pre
             UF: t.String()
         })
     })
-    .delete("/:id", async ({ params }) => {
+    .delete("/:id", async ({ params, request, set }) => {
         const id = parseInt(params.id);
+        const userGroup = Number(request.headers.get("x-user-group") || 0);
+        const CHECAGEM_GROUPS = new Set([1, 2, 3, 4, 5, 7]);
+
+        const rows: any[] = await prisma.$queryRawUnsafe(
+            `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
+        );
+        if (rows.length && Number(rows[0].idStatus) >= 2 && !CHECAGEM_GROUPS.has(userGroup)) {
+            set.status = 403;
+            return { error: "Proposta em checagem. Apenas usuários com permissão de checagem podem excluir." };
+        }
+
         await prisma.cRM_Proposta.delete({
             where: { idProposta: id }
         });

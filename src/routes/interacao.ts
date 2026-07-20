@@ -205,6 +205,30 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
         }
     })
 
+    .post("/upload-image", async ({ body, set }) => {
+        try {
+            const formData = body as any;
+            const file = formData.file;
+            if (!file) { set.status = 400; return { error: "file é obrigatório" }; }
+
+            const originalName = file.name || "image.png";
+            const contentType = file.type || "image/png";
+            const ext = originalName.includes(".") ? "." + originalName.split(".").pop() : ".png";
+            const s3Key = `interacao-images/${crypto.randomUUID()}${ext}`;
+
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            await uploadToS3(s3Key, buffer, contentType);
+
+            const url = await getSignedViewUrl(s3Key, contentType);
+            return { url, key: s3Key };
+        } catch (error) {
+            console.error("Erro ao fazer upload de imagem:", error);
+            set.status = 400;
+            return { error: String(error) };
+        }
+    })
+
     .get("/download/:id", async ({ params, set }) => {
         try {
             const arquivo: any[] = await prisma.$queryRaw`
