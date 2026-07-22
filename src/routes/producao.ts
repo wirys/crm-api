@@ -173,7 +173,19 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
             FROM CRM_StatusGeral WITH (NOLOCK)
             ORDER BY id
         `);
-        const all = conv(rows);
+        const all = conv(rows).map((r: any) => ({
+            id: r.id,
+            descricao: r.Status,
+            cor: r.CorHTML,
+            flaProducao: r.flaProducao,
+            flaSeparacao: r.flaSeparacao,
+            flaEstoque: r.flaEstoque,
+            flaFinanceiro: r.flaFinanceiro,
+            flaPrioridade: r.flaPrioridade,
+            flaSetor: r.flaSetor,
+            flaAcertoCor: r.flaAcertoCor,
+            flaEnvase: r.flaEnvase,
+        }));
         return {
             producao:   all.filter((r: any) => r.flaProducao),
             separacao:  all.filter((r: any) => r.flaSeparacao),
