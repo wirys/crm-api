@@ -1771,6 +1771,7 @@ model CRM_Proposta_Difal {
   SInscEst     Float?
   Sim          Float?
   Nao          Float?
+  FCP          Float?
 }
 
 model CRM_Proposta_Etapa {

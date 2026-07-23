@@ -329,23 +329,27 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         } = body as any;
 
         const sets: string[] = [];
-        if (idDifal !== undefined) sets.push(`idDifal = ${Number(idDifal)}`);
-        if (CalculaDifal !== undefined) sets.push(`CalculaDifal = ${Number(CalculaDifal)}`);
-        if (Desconto !== undefined) sets.push(`Desconto = ${Number(Desconto)}`);
-        if (idFrete !== undefined) sets.push(`idFrete = ${Number(idFrete)}`);
-        if (idCondicaoPagamento !== undefined) sets.push(`idCondicaoPagamento = ${Number(idCondicaoPagamento)}`);
-        if (Observacao !== undefined) sets.push(`Observacao = '${String(Observacao).replace(/'/g, "''")}'`);
-        if (ObsChecagem !== undefined) sets.push(`ObsChecagem = '${String(ObsChecagem).replace(/'/g, "''")}'`);
-        if (Possibilidade !== undefined) sets.push(`Possibilidade = ${Number(Possibilidade)}`);
-        if (GanhoEstimado !== undefined) sets.push(`GanhoEstimado = ${Number(GanhoEstimado)}`);
-        if (DataPossivel !== undefined) sets.push(`DataPossivel = '${DataPossivel}'`);
-        if (dtaValidade !== undefined) sets.push(`dtaValidade = '${dtaValidade}'`);
-        if (Area !== undefined) sets.push(`Area = ${Number(Area)}`);
-        if (ValorM2 !== undefined) sets.push(`ValorM2 = ${Number(ValorM2)}`);
-        if (FundoPobreza !== undefined) sets.push(`FundoPobreza = ${Number(FundoPobreza)}`);
-        if (idOutros !== undefined) sets.push(`idOutros = ${Number(idOutros)}`);
-        if (ValorOutros !== undefined) sets.push(`ValorOutros = ${Number(ValorOutros)}`);
-        if (Valor !== undefined) sets.push(`Valor = ${Number(Valor)}`);
+        const num = (v: any) => (v === null || v === "" || v === undefined) ? "NULL" : String(Number(v));
+        const str = (v: any) => (v === null || v === undefined) ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
+        const date = (v: any) => (!v || v === "") ? "NULL" : `'${v}'`;
+
+        if (idDifal !== undefined) sets.push(`idDifal = ${num(idDifal)}`);
+        if (CalculaDifal !== undefined) sets.push(`CalculaDifal = ${num(CalculaDifal)}`);
+        if (Desconto !== undefined) sets.push(`Desconto = ${num(Desconto)}`);
+        if (idFrete !== undefined) sets.push(`idFrete = ${num(idFrete)}`);
+        if (idCondicaoPagamento !== undefined) sets.push(`idCondicaoPagamento = ${num(idCondicaoPagamento)}`);
+        if (Observacao !== undefined) sets.push(`Observacao = ${str(Observacao)}`);
+        if (ObsChecagem !== undefined) sets.push(`ObsChecagem = ${str(ObsChecagem)}`);
+        if (Possibilidade !== undefined) sets.push(`Possibilidade = ${num(Possibilidade)}`);
+        if (GanhoEstimado !== undefined) sets.push(`GanhoEstimado = ${num(GanhoEstimado)}`);
+        if (DataPossivel !== undefined) sets.push(`DataPossivel = ${date(DataPossivel)}`);
+        if (dtaValidade !== undefined) sets.push(`dtaValidade = ${date(dtaValidade)}`);
+        if (Area !== undefined) sets.push(`Area = ${num(Area)}`);
+        if (ValorM2 !== undefined) sets.push(`ValorM2 = ${num(ValorM2)}`);
+        if (FundoPobreza !== undefined) sets.push(`FundoPobreza = ${num(FundoPobreza)}`);
+        if (idOutros !== undefined) sets.push(`idOutros = ${num(idOutros)}`);
+        if (ValorOutros !== undefined) sets.push(`ValorOutros = ${num(ValorOutros)}`);
+        if (Valor !== undefined) sets.push(`Valor = ${num(Valor)}`);
 
         if (!sets.length) return { error: "Nenhum campo para atualizar" };
 
