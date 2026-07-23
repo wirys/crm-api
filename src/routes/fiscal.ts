@@ -17,7 +17,7 @@ function conv(obj: any): any {
 export const fiscalRoutes = new Elysia({ prefix: "/fiscal" })
     .get("/difal", async () => {
         const rows: any[] = await prisma.$queryRawUnsafe(`
-            SELECT idDifal, UF, AliqEst, AliqInt, Sim, Nao, FCP
+            SELECT idDifal, UF, AliqEst, AliqInt, FCP
             FROM CRM_Proposta_Difal WITH (NOLOCK)
             ORDER BY UF
         `);
@@ -25,13 +25,11 @@ export const fiscalRoutes = new Elysia({ prefix: "/fiscal" })
     })
     .put("/difal/:id", async ({ params, body, set }) => {
         const id = Number(params.id);
-        const { AliqEst, AliqInt, Sim, Nao, FCP } = body as any;
+        const { AliqEst, AliqInt, FCP } = body as any;
 
         const fields: string[] = [];
         if (AliqEst !== undefined) fields.push(`AliqEst = ${Number(AliqEst)}`);
         if (AliqInt !== undefined) fields.push(`AliqInt = ${Number(AliqInt)}`);
-        if (Sim !== undefined) fields.push(`Sim = ${Number(Sim)}`);
-        if (Nao !== undefined) fields.push(`Nao = ${Number(Nao)}`);
         if (FCP !== undefined) fields.push(`FCP = ${FCP === null ? 'NULL' : Number(FCP)}`);
 
         if (!fields.length) { set.status = 400; return { error: "Nenhum campo para atualizar" }; }
