@@ -2,6 +2,14 @@ import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 import { getUserContext } from "../lib/user-context";
 
+function parseDateBR(value: string): Date | undefined {
+    if (!value) return undefined;
+    const parts = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (parts) return new Date(`${parts[3]}-${parts[2]}-${parts[1]}`);
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? undefined : d;
+}
+
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
     if (typeof obj === 'bigint') return Number(obj);
@@ -171,7 +179,7 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                         idBotConversa: idBotConversa ? parseInt(idBotConversa) : undefined,
                         idRepresentante: idRepresentante ? Number(idRepresentante) : undefined,
                         IdOrigem: IdOrigem ? Number(IdOrigem) : undefined,
-                        dtaAbertura: dtaAbertura ? new Date(dtaAbertura) : undefined,
+                        dtaAbertura: dtaAbertura ? parseDateBR(dtaAbertura) : undefined,
                         dtaAlteracao: new Date(),
                     },
                 });
@@ -270,7 +278,7 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                     data: {
                         ...contact,
                         idBotConversa: contact.idBotConversa ? parseInt(contact.idBotConversa) : undefined,
-                        dtaAbertura: contact.dtaAbertura ? new Date(contact.dtaAbertura) : undefined,
+                        dtaAbertura: contact.dtaAbertura ? parseDateBR(contact.dtaAbertura) : undefined,
                         dtaCadastro: new Date(),
                         flaAtivo: contact.flaAtivo === "1",
                     },
