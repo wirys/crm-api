@@ -73,13 +73,20 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
             const idGrupo = Number(user.idGrupo || 0);
             const authorizedLevel = [1, 2, 5, 7].includes(idGrupo) ? 1 : 2;
 
-            // Fetch Group Name
+            // Fetch Group Name + Permissions
             let groupName = "";
+            let permissoes: Record<string, any> = {};
             try {
-                const group = await prisma.cRM_Grupo.findUnique({
-                    where: { idGrupo },
-                });
-                groupName = group?.Grupo?.trim() || "";
+                const groups: any[] = await prisma.$queryRawUnsafe(
+                    `SELECT Grupo, Permissoes FROM CRM_Grupo WHERE idGrupo = ${idGrupo}`
+                );
+                const g = groups?.[0];
+                groupName = (g?.Grupo || "").trim();
+                if (g?.Permissoes) {
+                    permissoes = typeof g.Permissoes === "string"
+                        ? JSON.parse(g.Permissoes)
+                        : g.Permissoes;
+                }
             } catch (e) {
                 console.error("[auth] failed to load group", e);
             }
@@ -121,6 +128,7 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
                     avatar: user.Imagem,
                     group: groupName,
                     authorized: authorizedLevel,
+                    permissoes,
                 },
             };
         },
@@ -171,9 +179,18 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
             const authorizedLevel = [1, 2, 5, 7].includes(idGrupo) ? 1 : 2;
 
             let groupName = "";
+            let permissoes: Record<string, any> = {};
             try {
-                const group = await prisma.cRM_Grupo.findUnique({ where: { idGrupo } });
-                groupName = group?.Grupo?.trim() || "";
+                const groups: any[] = await prisma.$queryRawUnsafe(
+                    `SELECT Grupo, Permissoes FROM CRM_Grupo WHERE idGrupo = ${idGrupo}`
+                );
+                const g = groups?.[0];
+                groupName = (g?.Grupo || "").trim();
+                if (g?.Permissoes) {
+                    permissoes = typeof g.Permissoes === "string"
+                        ? JSON.parse(g.Permissoes)
+                        : g.Permissoes;
+                }
             } catch {}
 
             const token = await jwt.sign({
@@ -203,6 +220,7 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
                     group: groupName,
                     authorized: authorizedLevel,
                     impersonatedBy: adminId,
+                    permissoes,
                 },
             };
         },
