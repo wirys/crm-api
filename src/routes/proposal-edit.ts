@@ -315,7 +315,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         }
     }, { params: t.Object({ idProposta: t.String() }) })
     .delete("/etapas/:idEtapa", async ({ params }) => {
-        await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Etapa WHERE idEtapa = ${Number(params.idEtapa)}`);
+        await prisma.$executeRawUnsafe(`DELETE FROM CRM_Proposta_Etapa WHERE idEtapa = ${Number(params.idEtapa)}`);
         return { success: true };
     }, { params: t.Object({ idEtapa: t.String() }) })
     .put("/:id", async ({ params, body, request, set }) => {
@@ -353,7 +353,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
 
         if (!sets.length) return { error: "Nenhum campo para atualizar" };
 
-        await prisma.$queryRawUnsafe(`UPDATE CRM_Proposta SET ${sets.join(", ")} WHERE idProposta = ${id}`);
+        await prisma.$executeRawUnsafe(`UPDATE CRM_Proposta SET ${sets.join(", ")} WHERE idProposta = ${id}`);
         return { success: true };
     })
     .put("/:id/generate-code", async ({ params, body, request, set }) => {
@@ -385,7 +385,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         if (idFrete           !== undefined) preUpdateSets.push(`idFrete = ${Number(idFrete)}`);
 
         if (preUpdateSets.length > 0) {
-            await prisma.$queryRawUnsafe(
+            await prisma.$executeRawUnsafe(
                 `UPDATE CRM_Proposta SET ${preUpdateSets.join(", ")} WHERE idProposta = ${id}`
             );
         }
@@ -461,7 +461,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const ganhoDb     = row.GanhoEstimado !== null && row.GanhoEstimado !== undefined ? Number(row.GanhoEstimado) : "Null";
         const dataPosDb   = row.DataPossivel || "";
 
-        await prisma.$queryRawUnsafe(
+        await prisma.$executeRawUnsafe(
             `UPDATE CRM_Proposta SET ` +
             `FundoPobreza=${fpDb}, ` +
             `PropostaNo='${String(propostaNo).replace(/'/g, "''")}', ` +
@@ -605,7 +605,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
 
         try {
             // Atualiza o item solicitado
-            await prisma.$queryRawUnsafe(
+            await prisma.$executeRawUnsafe(
                 `UPDATE CRM_Proposta_Detalhe SET ${sets.join(", ")} WHERE idPropostaDetalhe = ${itemId}`
             );
 
@@ -618,7 +618,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 if (Quantidade !== undefined) childSets.push(`Quantidade = ${Number(Quantidade)}`);
                 if (Desconto   !== undefined) childSets.push(`Desconto   = ${Number(Desconto)}`);
                 if (childSets.length) {
-                    await prisma.$queryRawUnsafe(
+                    await prisma.$executeRawUnsafe(
                         `UPDATE CRM_Proposta_Detalhe SET ${childSets.join(", ")}
                          WHERE idComposicaoDetalhe = ${Number(row[0].idComposicao)} AND idProposta = ${propId}`
                     );
@@ -645,11 +645,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         );
         if (row.length && Number(row[0].idMaterial) === 0 && Number(row[0].idComposicao) > 0) {
             // Apaga filhos primeiro
-            await prisma.$queryRawUnsafe(
+            await prisma.$executeRawUnsafe(
                 `DELETE FROM CRM_Proposta_Detalhe WHERE idComposicaoDetalhe = ${Number(row[0].idComposicao)} AND idProposta = ${Number(params.id)}`
             );
         }
-        await prisma.$queryRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
+        await prisma.$executeRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
         return { success: true };
     })
     .get("/:id/detalhe", async ({ params }) => {
@@ -693,7 +693,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             ? Number(value)
             : `'${String(value).replace(/'/g, "''")}'`;
         const col = field === "MaterialDescricao" ? "MaterialDescricao" : field;
-        await prisma.$queryRawUnsafe(
+        await prisma.$executeRawUnsafe(
             `UPDATE CRM_Proposta_Detalhe SET ${col} = ${safeVal} WHERE idPropostaDetalhe = ${id}`
         );
         return { success: true };
