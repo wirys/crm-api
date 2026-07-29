@@ -82,13 +82,19 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
         }
     })
 
-    .post("/", async ({ body }) => {
-        const { idContato, idAtividadeTipo, idAtividadeStatus, conteudo, prazo, horario, valor, usuario, idUsuario } = body as any;
+    .post("/", async ({ body, request, set }) => {
+        const { idContato, idAtividadeTipo, idAtividadeStatus, conteudo, prazo, horario, valor } = body as any;
+        const uid = Number(request.headers.get("x-user-id") || 1);
         try {
             const contato: any[] = await prisma.$queryRawUnsafe(
                 `SELECT nomContato FROM CRM_Contato WHERE idContato = ${Number(idContato)}`
             );
-            if (!contato.length) return { status: 404, error: "Contato não encontrado" };
+            if (!contato.length) { set.status = 404; return { error: "Contato não encontrado" }; }
+
+            const userRow: any[] = await prisma.$queryRawUnsafe(
+                `SELECT Nome FROM CRM_Usuario WHERE idUsuario = ${uid}`
+            );
+            const userName = userRow.length ? String(userRow[0].Nome || 'User').replace(/'/g, "''") : 'User';
 
             let dtaProximo = "NULL";
             if (prazo) {
@@ -97,29 +103,30 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
             }
 
             const content = String(conteudo || '').replace(/'/g, "''");
-            const user = String(usuario || 'User').replace(/'/g, "''");
-            const uid = Number(idUsuario || 1);
             const vl = valor ? Number(valor) : "NULL";
 
             await prisma.$queryRawUnsafe(`
                 INSERT INTO CRM_ContatoUpdate (idContato, CreatedAt, UpdateContent, dtaProximoContato, ItemName, [User], idUsuario, idAtividadeStatus, idAtividadeTipo, Valor)
-                VALUES (${Number(idContato)}, GETDATE(), '${content}', ${dtaProximo}, '${String(contato[0].nomContato).replace(/'/g, "''")}', '${user}', ${uid}, ${Number(idAtividadeStatus)}, ${Number(idAtividadeTipo)}, ${vl})
+                VALUES (${Number(idContato)}, GETDATE(), '${content}', ${dtaProximo}, '${String(contato[0].nomContato).replace(/'/g, "''")}', '${userName}', ${uid}, ${Number(idAtividadeStatus)}, ${Number(idAtividadeTipo)}, ${vl})
             `);
 
-            return { status: 201, data: { success: true } };
+            set.status = 201;
+            return { data: { success: true } };
         } catch (error) {
             console.error("Erro ao criar interação:", error);
-            return { status: 400, error: String(error) };
+            set.status = 400;
+            return { error: String(error) };
         }
     })
 
-    .delete("/:id", async ({ params }) => {
+    .delete("/:id", async ({ params, set }) => {
         try {
             await prisma.$executeRaw`DELETE FROM CRM_ContatoUpdate WHERE idContatoUpdate = ${parseInt(params.id)}`;
-            return { status: 200, message: "Interação deletada" };
+            return { message: "Interação deletada" };
         } catch (error) {
             console.error("Erro ao deletar interação:", error);
-            return { status: 400, error };
+            set.status = 400;
+            return { error };
         }
     });
 
@@ -164,11 +171,11 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
         }
     })
 
-    .post("/upload", async ({ body, set }) => {
+    .post("/upload", async ({ body, set, request }) => {
         try {
             const formData = body as any;
             const idContato = Number(formData.idContato);
-            const idUsuario = Number(formData.idUsuario || 1);
+            const idUsuario = Number(request.headers.get("x-user-id") || formData.idUsuario || 1);
             const files = formData.files;
 
             if (!idContato || !files) {
@@ -198,10 +205,12 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                 uploaded.push({ name: originalName, key: s3Key });
             }
 
-            return { status: 201, data: { uploaded } };
+            set.status = 201;
+            return { data: { uploaded } };
         } catch (error) {
             console.error("Erro ao fazer upload:", error);
-            return { status: 400, error: String(error) };
+            set.status = 400;
+            return { error: String(error) };
         }
     })
 
@@ -243,11 +252,12 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             return { url };
         } catch (error) {
             console.error("Erro ao gerar download:", error);
-            return { status: 400, error: String(error) };
+            set.status = 400;
+            return { error: String(error) };
         }
     })
 
-    .delete("/:id", async ({ params }) => {
+    .delete("/:id", async ({ params, set }) => {
         try {
             const arquivo: any[] = await prisma.$queryRaw`
                 SELECT CaminhoArquivo FROM CRM_ContatoArquivo WHERE id = ${parseInt(params.id)}
@@ -260,9 +270,10 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             }
 
             await prisma.$executeRaw`DELETE FROM CRM_ContatoArquivo WHERE id = ${parseInt(params.id)}`;
-            return { status: 200, message: "Arquivo deletado" };
+            return { message: "Arquivo deletado" };
         } catch (error) {
             console.error("Erro ao deletar arquivo:", error);
-            return { status: 400, error };
+            set.status = 400;
+            return { error };
         }
     });
