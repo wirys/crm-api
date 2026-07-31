@@ -46,7 +46,8 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
                 t1.Possibilidade,
                 t1.GanhoEstimado,
                 DataPossivel = ISNULL(CONVERT(varchar(10), t1.DataPossivel, 23), ''),
-                Representante = ISNULL(t2.Nome, 'N/D'),
+                Representante = ISNULL(t6.Nome, 'N/D'),
+                CriadoPor = ISNULL(t2.Nome, 'N/D'),
                 Status = t3.Status,
                 CorHTML = t3.CorHTML,
                 RazaoSocial = ISNULL(NULLIF(t4.nomComercial, ''), t4.nomContato),
@@ -58,9 +59,10 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             LEFT JOIN CRM_Proposta_Status AS t3 WITH (NOLOCK) ON t1.idStatus = t3.idStatus
             LEFT JOIN CRM_Contato AS t4 WITH (NOLOCK) ON t1.idContato = t4.idContato
             LEFT JOIN CRM_Proposta_CondicaoPagamento AS t5 WITH (NOLOCK) ON t1.idCondicaoPagamento = t5.idCondicaoPagamento
+            LEFT JOIN CRM_Usuario AS t6 WITH (NOLOCK) ON t4.idRepresentante = t6.idUsuario
             WHERE t1.PropostaNo IS NOT NULL
                 AND t1.idStatus IN (${statusFilter})
-                ${flaAcesso !== 9999 ? `AND t1.idUsuario = ${flaAcesso}` : ''}
+                ${flaAcesso !== 9999 ? `AND (t1.idUsuario = ${flaAcesso} OR t4.idRepresentante = ${flaAcesso})` : ''}
                 ${dta1 !== "0" && dta2 !== "0" ? `AND t1.DataPossivel BETWEEN '${dta1}' AND '${dta2}'` : ''}
             ORDER BY t1.idProposta DESC
         `);
@@ -71,6 +73,7 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             propostaNo: r.PropostaNo,
             razaoSocial: r.RazaoSocial || "",
             representante: r.Representante || "N/D",
+            criadoPor: r.CriadoPor || "N/D",
             status: r.Status || "",
             corHTML: r.CorHTML || "#cccccc",
             idStatus: r.idStatus,
@@ -99,9 +102,10 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
     .get("/filter-options", async () => {
         const [representantes, contatos, statuses] = await Promise.all([
             prisma.$queryRawUnsafe(`
-                SELECT DISTINCT t2.idUsuario as id, UPPER(t2.Nome) as nome
+                SELECT DISTINCT t3.idUsuario as id, UPPER(t3.Nome) as nome
                 FROM CRM_Proposta AS t1 WITH (NOLOCK)
-                INNER JOIN CRM_Usuario AS t2 WITH (NOLOCK) ON t1.idUsuario = t2.idUsuario
+                INNER JOIN CRM_Contato AS t2 WITH (NOLOCK) ON t1.idContato = t2.idContato
+                INNER JOIN CRM_Usuario AS t3 WITH (NOLOCK) ON t2.idRepresentante = t3.idUsuario
                 WHERE t1.PropostaNo IS NOT NULL
                 ORDER BY nome
             `),
