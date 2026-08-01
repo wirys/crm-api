@@ -142,9 +142,9 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 t1.Desconto,
                 t1.MaterialDescricao,
                 nomMaterial     = ISNULL(t2.nomMaterial, t1.MaterialDescricao),
-                CodMaterial     = ISNULL(t2.CodMaterial, ''),
+                CodMaterial     = ISNULL(t1.codMaterialAlt, ISNULL(t2.CodMaterial, '')),
                 t2.NCM,
-                PesoEmbalagem   = ISNULL(t2.PesoEmbalagem, 0),
+                PesoEmbalagem   = ISNULL(t1.PesoEmbalagemAlt, ISNULL(t2.PesoEmbalagem, 0)),
                 PrecoKg         = ISNULL(t2.PrecoKg, 0),
                 ValorEmbalagem  = ISNULL(t2.ValorEmbalagem, 0),
                 IPI             = ISNULL(t2.IPI, 0),
@@ -686,15 +686,25 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         if (locked) { set.status = 403; return { error: locked }; }
         const { idPropostaDetalhe, field, value } = body as any;
         const id = Number(idPropostaDetalhe);
-        const allowed = ["CodMaterial", "PesoEmbalagem", "MaterialDescricao"];
-        if (!allowed.includes(field)) return { error: "Campo não permitido" };
+        const columnMap: Record<string, string> = {
+            CodMaterial: "codMaterialAlt",
+            PesoEmbalagem: "PesoEmbalagemAlt",
+            MaterialDescricao: "MaterialDescricao",
+        };
+        if (!(field in columnMap)) return { error: "Campo não permitido" };
 
         const safeVal = field === "PesoEmbalagem"
             ? Number(value)
             : `'${String(value).replace(/'/g, "''")}'`;
-        const col = field === "MaterialDescricao" ? "MaterialDescricao" : field;
-        await prisma.$executeRawUnsafe(
-            `UPDATE CRM_Proposta_Detalhe SET ${col} = ${safeVal} WHERE idPropostaDetalhe = ${id}`
-        );
-        return { success: true };
+        const col = columnMap[field];
+        try {
+            await prisma.$executeRawUnsafe(
+                `UPDATE CRM_Proposta_Detalhe SET ${col} = ${safeVal} WHERE idPropostaDetalhe = ${id}`
+            );
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao atualizar material" };
+        }
     });
