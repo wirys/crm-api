@@ -33,6 +33,7 @@ import { feriadosRoutes } from "./routes/feriados";
 import { followupRoutes } from "./routes/followup";
 import { perfisRoutes } from "./routes/perfis";
 import { fiscalRoutes } from "./routes/fiscal";
+import { publicProposalsRoutes } from "./routes/public-proposals";
 import { actionLogger } from "./lib/action-logger";
 
 const {URL, PORT} = Bun.env;
@@ -80,6 +81,7 @@ export const app = new Elysia()
     .use(followupRoutes)
     .use(perfisRoutes)
     .use(fiscalRoutes)
+    .use(publicProposalsRoutes)
   .use(openapi({
         path: '/docs',
         documentation: {
@@ -133,6 +135,7 @@ export const app = new Elysia()
                 { name: 'Admin', description: 'Painel administrativo' },
                 { name: 'Dashboard', description: 'Indicadores e estatisticas' },
                 { name: 'Usuarios', description: 'Gestao de usuarios' },
+                { name: 'API Pública - Propostas', description: 'Endpoints públicos de propostas com rate limiting (30 req/min para acesso externo)' },
             ],
         }
     }))

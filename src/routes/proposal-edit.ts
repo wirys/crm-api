@@ -253,8 +253,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             SELECT
                 m.idMaterial,
                 m.nomMaterial,
-                m.CodMaterial AS Codigo,
-                cm.Quantidade
+                m.CodMaterial AS Codigo
             FROM CRM_Produto_ComposicaoMaterial cm
             JOIN CRM_Produto_Material m ON cm.idMaterial = m.idMaterial
             WHERE cm.idComposicao = (
@@ -300,7 +299,13 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const { Etapa, Descricao, Ordem } = body as any;
         const etapaName = String(Etapa || '').replace(/'/g, "''");
         const desc = String(Descricao || '').replace(/'/g, "''");
-        const ordem = Number(Ordem || 0);
+        let ordem = Ordem != null && Ordem !== 0 ? Number(Ordem) : null;
+        if (ordem === null) {
+            const maxResult: any[] = await prisma.$queryRawUnsafe(`
+                SELECT ISNULL(MAX(Ordem), 0) as maxOrdem FROM CRM_Proposta_Etapa WHERE idProposta = ${id}
+            `);
+            ordem = Number(maxResult[0]?.maxOrdem ?? 0) + 1;
+        }
         try {
             const result: any[] = await prisma.$queryRawUnsafe(`
                 INSERT INTO CRM_Proposta_Etapa (idProposta, Etapa, Descricao, Ordem, dtaCadastro)
@@ -312,6 +317,38 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             console.error(e);
             set.status = 500;
             return { error: "Erro ao criar etapa" };
+        }
+    }, { params: t.Object({ idProposta: t.String() }) })
+    .put("/etapas/:idEtapa", async ({ params, body, set }) => {
+        const idEtapa = Number(params.idEtapa);
+        const { Etapa, Descricao, Ordem } = body as any;
+        const parts: string[] = [];
+        if (Etapa !== undefined) parts.push(`Etapa = '${String(Etapa).replace(/'/g, "''")}'`);
+        if (Descricao !== undefined) parts.push(`Descricao = '${String(Descricao).replace(/'/g, "''")}'`);
+        if (Ordem !== undefined) parts.push(`Ordem = ${Number(Ordem)}`);
+        if (parts.length === 0) return { success: true };
+        try {
+            await prisma.$executeRawUnsafe(`UPDATE CRM_Proposta_Etapa SET ${parts.join(', ')} WHERE idEtapa = ${idEtapa}`);
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao atualizar etapa" };
+        }
+    }, { params: t.Object({ idEtapa: t.String() }) })
+    .put("/etapas-reorder/:idProposta", async ({ params, body, set }) => {
+        const id = Number(params.idProposta);
+        const { order } = body as any;
+        if (!Array.isArray(order)) { set.status = 400; return { error: "order deve ser um array de idEtapa" }; }
+        try {
+            for (let i = 0; i < order.length; i++) {
+                await prisma.$executeRawUnsafe(`UPDATE CRM_Proposta_Etapa SET Ordem = ${i + 1} WHERE idEtapa = ${Number(order[i])} AND idProposta = ${id}`);
+            }
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao reordenar etapas" };
         }
     }, { params: t.Object({ idProposta: t.String() }) })
     .delete("/etapas/:idEtapa", async ({ params }) => {
@@ -609,18 +646,21 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 `UPDATE CRM_Proposta_Detalhe SET ${sets.join(", ")} WHERE idPropostaDetalhe = ${itemId}`
             );
 
-            // Se é item pai de composição (idMaterial=0), propaga Quantidade e Desconto para filhos
+            // Se é item de composição (bicomponente, tricomponente, etc), propaga Quantidade e Desconto para os demais materiais do mesmo grupo
             const row: any[] = await prisma.$queryRawUnsafe(
-                `SELECT idMaterial, idComposicao FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
+                `SELECT idComposicao, idComposicaoDetalhe FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
             );
-            if (row.length && Number(row[0].idMaterial) === 0 && Number(row[0].idComposicao) > 0) {
+            if (row.length && Number(row[0].idComposicao) > 0) {
                 const childSets: string[] = [];
                 if (Quantidade !== undefined) childSets.push(`Quantidade = ${Number(Quantidade)}`);
                 if (Desconto   !== undefined) childSets.push(`Desconto   = ${Number(Desconto)}`);
                 if (childSets.length) {
                     await prisma.$executeRawUnsafe(
                         `UPDATE CRM_Proposta_Detalhe SET ${childSets.join(", ")}
-                         WHERE idComposicaoDetalhe = ${Number(row[0].idComposicao)} AND idProposta = ${propId}`
+                         WHERE idComposicao = ${Number(row[0].idComposicao)}
+                           AND idComposicaoDetalhe = ${Number(row[0].idComposicaoDetalhe)}
+                           AND idProposta = ${propId}
+                           AND idPropostaDetalhe <> ${itemId}`
                     );
                 }
             }
@@ -679,6 +719,32 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         };
 
         return { rows, summary };
+    })
+    .patch("/:id/items/bulk-discount", async ({ params, body, request, set }) => {
+        const propId = Number(params.id);
+        const locked = await checkProposalLocked(propId, request);
+        if (locked) { set.status = 403; return { error: locked }; }
+        const { desconto, mode } = body as { desconto: number; mode: "all" | "non-manual" };
+
+        if (mode === "all") {
+            await prisma.$executeRawUnsafe(
+                `UPDATE CRM_Proposta_Detalhe SET Desconto = ${Number(desconto)} WHERE idProposta = ${propId}`
+            );
+        } else if (mode === "non-manual") {
+            await prisma.$executeRawUnsafe(
+                `UPDATE CRM_Proposta_Detalhe SET Desconto = ${Number(desconto)} WHERE idProposta = ${propId} AND Desconto IS NULL`
+            );
+        }
+        return { success: true };
+    }, {
+        params: t.Object({ id: t.String() }),
+    })
+    .get("/:id/items/has-manual-discount", async ({ params }) => {
+        const propId = Number(params.id);
+        const rows: any[] = await prisma.$queryRawUnsafe(
+            `SELECT COUNT(*) as cnt FROM CRM_Proposta_Detalhe WHERE idProposta = ${propId} AND Desconto IS NOT NULL`
+        );
+        return { hasManual: Number(rows[0]?.cnt ?? 0) > 0 };
     })
     .patch("/:id/detalhe/material", async ({ params, body, request, set }) => {
         const propId = Number(params.id);
