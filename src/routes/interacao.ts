@@ -99,7 +99,7 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
             let dtaProximo = "NULL";
             if (prazo) {
                 const h = horario || "00:00";
-                dtaProximo = `'${prazo}T${h}'`;
+                dtaProximo = `'${prazo} ${h}:00'`;
             }
 
             const content = String(conteudo || '').replace(/'/g, "''");
