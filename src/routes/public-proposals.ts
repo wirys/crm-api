@@ -110,16 +110,22 @@ export const publicProposalsRoutes = new Elysia({
                 SELECT
                     p.idProposta,
                     p.PropostaNo,
-                    ClienteNome   = ISNULL(c.nomContato, ''),
+                    ClienteNome     = ISNULL(c.nomContato, ''),
                     p.TotalKg,
                     p.TotalValor,
                     p.idStatus,
-                    Status        = ISNULL(s.Status, 'N/D'),
-                    CorHTML       = ISNULL(s.CorHTML, '#999999'),
-                    dtaCriacao    = CASE WHEN p.dtaCriacao IS NULL THEN '' ELSE FORMAT(p.dtaCriacao, 'dd/MM/yyyy') END
+                    Status          = ISNULL(s.Status, 'N/D'),
+                    CorHTML         = ISNULL(s.CorHTML, '#999999'),
+                    dtaCriacao      = CASE WHEN p.dtaCriacao IS NULL THEN '' ELSE FORMAT(p.dtaCriacao, 'dd/MM/yyyy') END,
+                    CriadoPorNome   = ISNULL(u.Nome, ''),
+                    CriadoPorEmail  = ISNULL(u.Email, ''),
+                    VendedorNome    = ISNULL(v.Nome, ''),
+                    VendedorEmail   = ISNULL(v.Email, '')
                 FROM CRM_Proposta AS p WITH (NOLOCK)
                 LEFT JOIN CRM_Contato          AS c WITH (NOLOCK) ON p.idContato = c.idContato
                 LEFT JOIN CRM_Proposta_Status  AS s WITH (NOLOCK) ON p.idStatus  = s.idStatus
+                LEFT JOIN CRM_Usuario          AS u WITH (NOLOCK) ON p.idUsuario = u.idUsuario
+                LEFT JOIN CRM_Usuario          AS v WITH (NOLOCK) ON c.idRepresentante = v.idUsuario
                 WHERE ${where}
                 ORDER BY p.dtaCriacao DESC
                 OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY
@@ -164,6 +170,8 @@ export const publicProposalsRoutes = new Elysia({
                 "- `limit` — Itens por página (default: 20, máximo: 50)",
                 "- `status` — Filtrar por idStatus",
                 "- `search` — Busca por PropostaNo ou nome do cliente (máximo 100 caracteres)",
+                "",
+                "**Campos adicionais:** `CriadoPorNome`/`CriadoPorEmail` (usuário que criou a proposta) e `VendedorNome`/`VendedorEmail` (representante responsável pelo contato).",
             ].join("\n"),
         },
     })
@@ -178,20 +186,26 @@ export const publicProposalsRoutes = new Elysia({
             SELECT TOP 1
                 p.idProposta,
                 p.PropostaNo,
-                ClienteNome   = ISNULL(c.nomContato, ''),
-                UF            = ISNULL(d.UF, ''),
+                ClienteNome     = ISNULL(c.nomContato, ''),
+                UF              = ISNULL(d.UF, ''),
                 p.CalculaDifal,
                 p.Desconto,
                 p.TotalKg,
                 p.TotalValor,
                 p.idStatus,
-                Status        = ISNULL(s.Status, 'N/D'),
-                CorHTML       = ISNULL(s.CorHTML, '#999999'),
-                dtaCriacao    = CASE WHEN p.dtaCriacao IS NULL THEN '' ELSE FORMAT(p.dtaCriacao, 'dd/MM/yyyy') END
+                Status          = ISNULL(s.Status, 'N/D'),
+                CorHTML         = ISNULL(s.CorHTML, '#999999'),
+                dtaCriacao      = CASE WHEN p.dtaCriacao IS NULL THEN '' ELSE FORMAT(p.dtaCriacao, 'dd/MM/yyyy') END,
+                CriadoPorNome   = ISNULL(u.Nome, ''),
+                CriadoPorEmail  = ISNULL(u.Email, ''),
+                VendedorNome    = ISNULL(v.Nome, ''),
+                VendedorEmail   = ISNULL(v.Email, '')
             FROM CRM_Proposta AS p WITH (NOLOCK)
             LEFT JOIN CRM_Contato          AS c WITH (NOLOCK) ON p.idContato = c.idContato
             LEFT JOIN CRM_Proposta_Difal   AS d WITH (NOLOCK) ON p.idDifal   = d.idDifal
             LEFT JOIN CRM_Proposta_Status  AS s WITH (NOLOCK) ON p.idStatus  = s.idStatus
+            LEFT JOIN CRM_Usuario          AS u WITH (NOLOCK) ON p.idUsuario = u.idUsuario
+            LEFT JOIN CRM_Usuario          AS v WITH (NOLOCK) ON c.idRepresentante = v.idUsuario
             WHERE p.idProposta = ${id}
         `);
 
