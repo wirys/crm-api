@@ -49,6 +49,10 @@ export const agendaRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefi
             dtaFim:     t.Optional(t.String()),
             idStatus:   t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar compromissos da agenda",
+            description: "Retorna os compromissos da agenda com status e título relacionados, ordenados por data de início ascendente. Permite filtrar por usuário (idUsuario), contato (idContato), status (idStatus) e por um intervalo de datas (dtaInicio/dtaFim), sendo que dtaFim é ajustado para incluir até 23:59:59 do dia informado.",
+        },
     })
 
     // ── GET /agenda/meta ──────────────────────────────────────────────────────
@@ -58,6 +62,11 @@ export const agendaRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefi
             (prisma as any).cRM_AgendaTitulo.findMany({ where: { flaAtivo: true }, orderBy: { Titulo: "asc" } }),
         ]);
         return { statuses: conv(statuses), titulos: conv(titulos) };
+    }, {
+        detail: {
+            summary: "Obter metadados da agenda",
+            description: "Retorna as listas de apoio usadas nos formulários de agenda: todos os status de agenda cadastrados (ordenados por id) e os títulos de agenda ativos (flaAtivo = true, ordenados alfabeticamente).",
+        },
     })
 
     // ── POST /agenda ──────────────────────────────────────────────────────────
@@ -91,6 +100,10 @@ export const agendaRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefi
             idUsuario:      t.Number(),
             idContato:      t.Optional(t.Number()),
         }),
+        detail: {
+            summary: "Criar compromisso na agenda",
+            description: "Cria um novo compromisso vinculado a um título de agenda, usuário e, opcionalmente, um contato. Recebe descrição, data/hora de início e fim e o status inicial do compromisso. Define automaticamente a data de alteração no momento da criação.",
+        },
     })
 
     // ── PATCH /agenda/:id ─────────────────────────────────────────────────────
@@ -124,6 +137,10 @@ export const agendaRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefi
             DataFim:        t.Optional(t.String()),
             idAgendaStatus: t.Optional(t.Number()),
         }),
+        detail: {
+            summary: "Atualizar compromisso da agenda",
+            description: "Atualiza parcialmente um compromisso existente pelo id informado na URL. Apenas os campos enviados no corpo (título, descrição, datas de início/fim ou status) são alterados; a data de alteração é sempre atualizada para o momento da requisição.",
+        },
     })
 
     // ── DELETE /agenda/:id ────────────────────────────────────────────────────
@@ -139,4 +156,8 @@ export const agendaRoutes = new Elysia({ detail: { tags: ["Atividades"] }, prefi
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Excluir compromisso da agenda",
+            description: "Exclui definitivamente um compromisso da agenda pelo id informado na URL.",
+        },
     });

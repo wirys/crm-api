@@ -121,7 +121,11 @@ export const activitiesRoutes = new Elysia({ detail: { tags: ["Atividades"] }, p
             idStatus: t.Optional(t.String()),
             dtaInicio: t.Optional(t.String()),
             dtaFim: t.Optional(t.String())
-        })
+        }),
+        detail: {
+            summary: "Listar atividades (CRM_ContatoUpdate)",
+            description: "Retorna atividades de contato com dados de status, origem, tipo de atividade e representante, via consulta SQL otimizada com joins. Aceita filtros por listas separadas por vírgula de idStatusAtividade, idContato, idOrigem, idTipoAtividade, idRepresentanteGerou, idRepresentante e idStatus, além de intervalo de datas (dtaInicio/dtaFim) para a próxima data de contato. Se o usuário autenticado não for admin, o filtro de representante é forçado ao próprio usuário, ignorando o valor enviado.",
+        },
     })
     .get("/test-pipeline", async () => {
         try {
@@ -134,6 +138,11 @@ export const activitiesRoutes = new Elysia({ detail: { tags: ["Atividades"] }, p
             console.error(error);
             return { error: "Failed" };
         }
+    }, {
+        detail: {
+            summary: "Listar pipelines distintos de contatos",
+            description: "Retorna a lista de valores distintos do campo Pipeline presentes nos contatos cadastrados, removendo valores vazios/nulos. Usada como rota auxiliar de teste/depuração para o pipeline de contatos.",
+        },
     })
     .get("/filter-options", async () => {
         try {
@@ -158,4 +167,9 @@ export const activitiesRoutes = new Elysia({ detail: { tags: ["Atividades"] }, p
             console.error("Error fetching filter options:", error);
             return { error: "Failed to fetch filter options" };
         }
+    }, {
+        detail: {
+            summary: "Obter opções de filtro para atividades",
+            description: "Retorna listas de opções (valor/rótulo) para popular os filtros da tela de atividades: contatos, status de contato, origens, tipos de atividade, status de atividade e representantes (usuários), cada uma ordenada alfabeticamente pelo respectivo nome/descrição.",
+        },
     });

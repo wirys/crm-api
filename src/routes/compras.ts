@@ -51,11 +51,21 @@ export const comprasRoutes = new Elysia({ detail: { tags: ["Compras"] }, prefix:
 
         const total = conv(countRows)[0]?.Total ?? 0;
         return { data: conv(rows), meta: { page: pageNum, limit: limitNum, total, hasMore: offset + limitNum < total } };
+    }, {
+        detail: {
+            summary: "Listar materiais de compras com paginação",
+            description: "Retorna, com paginação (page/limit), os materiais cadastrados em CRM_Produto_Material com o nome do grupo (join com CRM_Produto_MaterialGrupo), incluindo NCM, unidade, peso de embalagem, preços por faixa de kg, IPI, ST e status de ativo. Permite busca textual (search) por nome do material ou código do material, ordenados por nome.",
+        },
     })
 
     .get("/grupos", async () => {
         const rows = await prisma.cRM_Produto_MaterialGrupo.findMany({ orderBy: { nomGrupo: "asc" } });
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar grupos de materiais",
+            description: "Retorna todos os grupos de materiais cadastrados em CRM_Produto_MaterialGrupo, ordenados por nome (nomGrupo), para uso em filtros e formulários de cadastro de materiais de compra.",
+        },
     });
 
 export const fornecedorRoutes = new Elysia({ detail: { tags: ["Compras"] }, prefix: "/fornecedores" })
@@ -91,6 +101,11 @@ export const fornecedorRoutes = new Elysia({ detail: { tags: ["Compras"] }, pref
 
         const total = conv(countRows)[0]?.Total ?? 0;
         return { data: conv(rows), meta: { page: pageNum, limit: limitNum, total, hasMore: offset + limitNum < total } };
+    }, {
+        detail: {
+            summary: "Listar fornecedores com paginação",
+            description: "Retorna, com paginação (page/limit), os contatos da tabela CRM_Contato cujo Tipo é 'Fornecedor', incluindo nome, nome comercial, CNPJ, contato na empresa, telefone, e-mail, segmento, status e data de cadastro. Permite busca textual (search) por nome comercial, CNPJ ou nome de contato, ordenados por nome comercial.",
+        },
     })
 
     .post("/", async ({ body, set }) => {
@@ -124,6 +139,10 @@ export const fornecedorRoutes = new Elysia({ detail: { tags: ["Compras"] }, pref
             email: t.Optional(t.String()),
             Segmento: t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Criar fornecedor",
+            description: "Cria um novo contato do tipo 'Fornecedor' na tabela CRM_Contato com nome comercial, CNPJ, contato na empresa, telefone, e-mail e segmento. O registro é criado com flaAtivo = true e dtaCadastro preenchida com a data atual.",
+        },
     })
 
     .patch("/:id", async ({ params, body, set }) => {
@@ -150,4 +169,8 @@ export const fornecedorRoutes = new Elysia({ detail: { tags: ["Compras"] }, pref
             Segmento: t.Optional(t.String()),
             flaAtivo: t.Optional(t.Boolean()),
         }),
+        detail: {
+            summary: "Atualizar fornecedor",
+            description: "Atualiza parcialmente um fornecedor (contato na tabela CRM_Contato) identificado por :id, permitindo alterar nome comercial, CNPJ, contato na empresa, telefone, e-mail, segmento e status de ativo (flaAtivo). Atualiza automaticamente o campo dtaAlteracao com a data/hora atual.",
+        },
     });

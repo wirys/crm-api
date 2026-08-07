@@ -161,4 +161,9 @@ export const dashboardRoutes = new Elysia({ detail: { tags: ["Dashboard"] }, pre
             segments,
             pipelineByStatus
         };
+    }, {
+        detail: {
+            summary: "Obter estatísticas do dashboard",
+            description: "Retorna KPIs consolidados (faturamento ganho, ticket médio, taxa de conversão, valor em pipeline), evolução mensal dos últimos 6 meses, ranking dos 5 principais representantes, distribuição por segmento e pipeline por status. Exige token JWT válido no header Authorization. Se o usuário não for administrador (Autorizado !== 1), os dados são filtrados apenas para o próprio representante (idRepresentante/idUsuario).",
+        },
     });

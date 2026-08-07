@@ -74,6 +74,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         `);
         if (!results.length) return { error: "Proposta não encontrada" };
         return convertBigIntToNumber(results[0]);
+    }, {
+        detail: {
+            summary: "Buscar proposta para edição",
+            description: "Retorna os dados completos de uma proposta pelo idProposta, incluindo UF, cliente, status e cor associados, para preencher o formulário de edição.",
+        },
     })
     .get("/commercial/:id", async ({ params }) => {
         const id = Number(params.id);
@@ -118,6 +123,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             representanteEmail: r.RepresentanteEmail || "",
             representanteTelefone: r.RepresentanteTelefone || "",
         };
+    }, {
+        detail: {
+            summary: "Buscar dados comerciais da proposta",
+            description: "Retorna um resumo comercial da proposta (número, cliente, CNPJ, contato, frete, condição de pagamento, representante e observação de checagem), usado em telas de visualização/impressão da proposta.",
+        },
     })
     .get("/:id/items", async ({ params }) => {
         const id = Number(params.id);
@@ -196,6 +206,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         }
 
         return converted;
+    }, {
+        detail: {
+            summary: "Listar itens da proposta",
+            description: "Retorna os itens/materiais de uma proposta, ordenados por etapa e composição. Quando existe PropostaNo, enriquece cada item com preço, peso de embalagem e IPI reais buscados via sp_CRMTabelaPrecoIndividual.",
+        },
     })
     .get("/:id/totals", async ({ params }) => {
         const id = Number(params.id);
@@ -211,6 +226,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             `EXEC sp_CRMPropostaDetalhe @PropostaNo = '${propostaNo}'`
         );
         return convertBigIntToNumber(results);
+    }, {
+        detail: {
+            summary: "Calcular totais da proposta",
+            description: "Busca o PropostaNo da proposta e executa a stored procedure sp_CRMPropostaDetalhe para obter os totais calculados (quantidade, IPI, valor geral e peso), retornando lista vazia caso a proposta ainda não tenha PropostaNo.",
+        },
     })
     .get("/products", async () => {
         const results: any[] = await prisma.$queryRawUnsafe(`
@@ -227,6 +247,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             ORDER BY t2.nomGrupo, t1.nomMaterial
         `);
         return convertBigIntToNumber(results);
+    }, {
+        detail: {
+            summary: "Listar materiais ativos",
+            description: "Retorna todos os materiais do catálogo (CRM_Produto_Material) com flaAtivo = 1, agrupados e ordenados por grupo de material, para uso em seletores de produtos.",
+        },
     })
     .get("/products/search", async ({ query }) => {
         const q = query.q || "";
@@ -246,6 +271,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             ORDER BY t1.nomMaterial
         `);
         return convertBigIntToNumber(results);
+    }, {
+        detail: {
+            summary: "Buscar materiais por texto",
+            description: "Pesquisa até 50 materiais ativos cujo nome ou código contenham o termo informado no parâmetro de query `q`. Retorna lista vazia se `q` não for informado.",
+        },
     })
     .get("/products/:idMaterial/composicao", async ({ params }) => {
         const idMaterial = Number(params.idMaterial);
@@ -264,6 +294,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             AND cm.idMaterial <> ${idMaterial}
         `);
         return convertBigIntToNumber(results);
+    }, {
+        detail: {
+            summary: "Listar materiais de uma composição",
+            description: "Dado um idMaterial, localiza a composição (CRM_Produto_ComposicaoMaterial) à qual ele pertence e retorna os demais materiais dessa mesma composição, excluindo o material informado.",
+        },
     })
     .get("/product-detail/:propostaNo/:idMaterial", async ({ params }) => {
         const { propostaNo, idMaterial } = params;
@@ -272,6 +307,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         );
         if (!results.length) return { error: "Produto não encontrado" };
         return convertBigIntToNumber(results[0]);
+    }, {
+        detail: {
+            summary: "Buscar preço individual de um material",
+            description: "Executa a stored procedure sp_CRMTabelaPrecoIndividual para um material específico dentro do contexto de uma proposta (propostaNo), retornando preço, peso de embalagem, IPI e valor de embalagem atualizados.",
+        },
     })
     .get("/dropdowns", async () => {
         const [ufs, fretes, condicoes, outros]: any[] = await Promise.all([
@@ -286,6 +326,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             condicoes: convertBigIntToNumber(condicoes),
             outros: convertBigIntToNumber(outros),
         };
+    }, {
+        detail: {
+            summary: "Listar opções para dropdowns da proposta",
+            description: "Retorna em paralelo as listas ativas de UFs (Difal), fretes, condições de pagamento e outros encargos, usadas para popular os seletores do formulário de edição de proposta.",
+        },
     })
     .get("/etapas/:idProposta", async ({ params }) => {
         const id = Number(params.idProposta);
@@ -293,6 +338,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             SELECT idEtapa, Etapa, Descricao, Ordem FROM CRM_Proposta_Etapa WHERE idProposta = ${id} ORDER BY Ordem
         `);
         return convertBigIntToNumber(results);
+    }, {
+        detail: {
+            summary: "Listar etapas de uma proposta",
+            description: "Retorna as etapas cadastradas (CRM_Proposta_Etapa) de uma proposta, ordenadas pelo campo Ordem, usadas para agrupar os itens da proposta em fases de produção.",
+        },
     })
     .post("/etapas/:idProposta", async ({ params, body, set }) => {
         const id = Number(params.idProposta);
@@ -318,7 +368,13 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             set.status = 500;
             return { error: "Erro ao criar etapa" };
         }
-    }, { params: t.Object({ idProposta: t.String() }) })
+    }, {
+        params: t.Object({ idProposta: t.String() }),
+        detail: {
+            summary: "Criar etapa da proposta",
+            description: "Cria uma nova etapa (CRM_Proposta_Etapa) para a proposta informada. Se Ordem não for enviada, calcula automaticamente a próxima posição com base no maior valor de Ordem já cadastrado.",
+        },
+    })
     .put("/etapas/:idEtapa", async ({ params, body, set }) => {
         const idEtapa = Number(params.idEtapa);
         const { Etapa, Descricao, Ordem } = body as any;
@@ -335,7 +391,13 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             set.status = 500;
             return { error: "Erro ao atualizar etapa" };
         }
-    }, { params: t.Object({ idEtapa: t.String() }) })
+    }, {
+        params: t.Object({ idEtapa: t.String() }),
+        detail: {
+            summary: "Atualizar etapa",
+            description: "Atualiza parcialmente os campos Etapa, Descricao e/ou Ordem de uma etapa existente, identificada por idEtapa. Apenas os campos enviados no body são alterados.",
+        },
+    })
     .put("/etapas-reorder/:idProposta", async ({ params, body, set }) => {
         const id = Number(params.idProposta);
         const { order } = body as any;
@@ -350,11 +412,23 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             set.status = 500;
             return { error: "Erro ao reordenar etapas" };
         }
-    }, { params: t.Object({ idProposta: t.String() }) })
+    }, {
+        params: t.Object({ idProposta: t.String() }),
+        detail: {
+            summary: "Reordenar etapas da proposta",
+            description: "Recebe no body um array `order` com os idEtapa na nova sequência desejada e atualiza o campo Ordem de cada etapa (posição no array + 1) para a proposta informada.",
+        },
+    })
     .delete("/etapas/:idEtapa", async ({ params }) => {
         await prisma.$executeRawUnsafe(`DELETE FROM CRM_Proposta_Etapa WHERE idEtapa = ${Number(params.idEtapa)}`);
         return { success: true };
-    }, { params: t.Object({ idEtapa: t.String() }) })
+    }, {
+        params: t.Object({ idEtapa: t.String() }),
+        detail: {
+            summary: "Excluir etapa",
+            description: "Remove definitivamente uma etapa (CRM_Proposta_Etapa) pelo idEtapa informado.",
+        },
+    })
     .put("/:id", async ({ params, body, request, set }) => {
         const id = Number(params.id);
         const locked = await checkProposalLocked(id, request);
@@ -392,6 +466,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
 
         await prisma.$executeRawUnsafe(`UPDATE CRM_Proposta SET ${sets.join(", ")} WHERE idProposta = ${id}`);
         return { success: true };
+    }, {
+        detail: {
+            summary: "Atualizar dados gerais da proposta",
+            description: "Atualiza campos da proposta (Difal, desconto, frete, condição de pagamento, observações, possibilidade, ganho estimado, datas, área, valor por m², fundo de pobreza, outros e valor). Bloqueia a edição se a proposta estiver em checagem (idStatus >= 2) e o usuário não pertencer aos grupos com permissão de checagem.",
+        },
     })
     .put("/:id/generate-code", async ({ params, body, request, set }) => {
         const id = Number(params.id);
@@ -533,7 +612,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             dtaValidade: t.Optional(t.String()),
             idCondicaoPagamento: t.Optional(t.Number()),
             idFrete: t.Optional(t.Number()),
-        })
+        }),
+        detail: {
+            summary: "Gerar código (PropostaNo) da proposta",
+            description: "Grava os valores mais recentes do formulário antes de chamar a stored procedure sp_CRMGeraNoProposta (com até 3 tentativas) para gerar o PropostaNo definitivo, salva o código gerado de volta na proposta e, se for amostra com data possível definida, dispara a SP CRM_AMOContatoUpdate. Bloqueia a edição se a proposta estiver em checagem e o usuário não tiver permissão.",
+        },
     })
     // ── POST /condicoes-pagamento  — cadastrar nova condição ──────────────────
     .post("/condicoes-pagamento", async ({ body, set }) => {
@@ -552,6 +635,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             set.status = 500;
             return { error: "Erro ao criar condição de pagamento" };
         }
+    }, {
+        detail: {
+            summary: "Criar condição de pagamento",
+            description: "Cadastra uma nova condição de pagamento (CRM_Proposta_CondicaoPagamento) ativa, a partir do título informado no body.",
+        },
     })
     // ── GET composição de um material ────────────────────────────────────────────
     .get("/composition/:idMaterial", async ({ params }) => {
@@ -584,6 +672,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             nomComposicao: compLink[0].nomComposicao,
             materiais,
         });
+    }, {
+        detail: {
+            summary: "Buscar composição de um material",
+            description: "Verifica se o material informado pertence a uma composição (bicomponente, tricomponente etc.) e, em caso positivo, retorna todos os materiais que integram essa composição com seus dados de preço e peso.",
+        },
     })
 
     .post("/:id/items", async ({ params, body, request, set }) => {
@@ -624,6 +717,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         }
 
         return { success: true };
+    }, {
+        detail: {
+            summary: "Adicionar item à proposta",
+            description: "Insere um novo item em CRM_Proposta_Detalhe. Se o body contiver `composicao.idComposicao`, replica o item para todos os materiais dessa composição usando o mesmo idComposicaoDetalhe; caso contrário insere um item avulso com o idMaterial informado. Bloqueia a operação se a proposta estiver em checagem.",
+        },
     })
     // ── PATCH /:id/items/:itemId  — editar Quantidade / Desconto ──
     .patch("/:id/items/:itemId", async ({ params, body, set, request }) => {
@@ -672,6 +770,10 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         }
     }, {
         params: t.Object({ id: t.String(), itemId: t.String() }),
+        detail: {
+            summary: "Editar item da proposta",
+            description: "Atualiza Quantidade, Desconto e/ou idEtapa de um item (idPropostaDetalhe). Se o item pertencer a uma composição, propaga Quantidade e Desconto para os demais materiais do mesmo grupo de composição. Bloqueia a edição se a proposta estiver em checagem.",
+        },
     })
 
     .delete("/:id/items/:itemId", async ({ params, request, set }) => {
@@ -691,6 +793,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         }
         await prisma.$executeRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
         return { success: true };
+    }, {
+        detail: {
+            summary: "Excluir item da proposta",
+            description: "Remove um item (idPropostaDetalhe) de CRM_Proposta_Detalhe. Se o item for pai de uma composição (idMaterial = 0 e idComposicao > 0), exclui primeiro os itens filhos dessa composição. Bloqueia a exclusão se a proposta estiver em checagem.",
+        },
     })
     .get("/:id/detalhe", async ({ params }) => {
         const id = Number(params.id);
@@ -719,6 +826,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         };
 
         return { rows, summary };
+    }, {
+        detail: {
+            summary: "Buscar detalhamento e resumo da proposta",
+            description: "Executa a stored procedure sp_CRMPropostaDetalhe para o PropostaNo da proposta e retorna as linhas de detalhamento junto com um resumo consolidado (quantidade total, IPI total, valor geral, peso total, frete e outros), extraído da última linha retornada pela SP.",
+        },
     })
     .patch("/:id/items/bulk-discount", async ({ params, body, request, set }) => {
         const propId = Number(params.id);
@@ -738,6 +850,10 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         return { success: true };
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Aplicar desconto em massa aos itens",
+            description: "Aplica o percentual de desconto informado a todos os itens da proposta (mode = 'all') ou apenas aos itens sem desconto manual definido (mode = 'non-manual'), atualizando CRM_Proposta_Detalhe. Bloqueia a operação se a proposta estiver em checagem.",
+        },
     })
     .get("/:id/items/has-manual-discount", async ({ params }) => {
         const propId = Number(params.id);
@@ -745,6 +861,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             `SELECT COUNT(*) as cnt FROM CRM_Proposta_Detalhe WHERE idProposta = ${propId} AND Desconto IS NOT NULL`
         );
         return { hasManual: Number(rows[0]?.cnt ?? 0) > 0 };
+    }, {
+        detail: {
+            summary: "Verificar se há desconto manual nos itens",
+            description: "Verifica se a proposta possui ao menos um item (CRM_Proposta_Detalhe) com desconto definido manualmente (campo Desconto não nulo), usado para alertar antes de aplicar desconto em massa.",
+        },
     })
     .patch("/:id/detalhe/material", async ({ params, body, request, set }) => {
         const propId = Number(params.id);
@@ -773,4 +894,9 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             set.status = 500;
             return { error: "Erro ao atualizar material" };
         }
+    }, {
+        detail: {
+            summary: "Editar campo alternativo do material do item",
+            description: "Atualiza um único campo alternativo de um item da proposta (CodMaterial -> codMaterialAlt, PesoEmbalagem -> PesoEmbalagemAlt ou MaterialDescricao), identificado por idPropostaDetalhe. Rejeita campos fora da lista permitida. Bloqueia a edição se a proposta estiver em checagem.",
+        },
     });

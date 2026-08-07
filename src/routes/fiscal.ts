@@ -22,6 +22,11 @@ export const fiscalRoutes = new Elysia({ prefix: "/fiscal" })
             ORDER BY UF
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar alíquotas de DIFAL por UF",
+            description: "Retorna todas as alíquotas de DIFAL (AliqEst, AliqInt, FCP) cadastradas por unidade federativa, ordenadas alfabeticamente pela UF.",
+        },
     })
     .put("/difal/:id", async ({ params, body, set }) => {
         const id = Number(params.id);
@@ -38,4 +43,9 @@ export const fiscalRoutes = new Elysia({ prefix: "/fiscal" })
             UPDATE CRM_Proposta_Difal SET ${fields.join(", ")} WHERE idDifal = ${id}
         `);
         return { ok: true };
+    }, {
+        detail: {
+            summary: "Atualizar alíquotas de DIFAL",
+            description: "Atualiza os campos `AliqEst`, `AliqInt` e/ou `FCP` do registro de DIFAL identificado por `id`. Apenas os campos enviados no corpo da requisição são atualizados; retorna erro 400 se nenhum campo válido for informado.",
+        },
     });

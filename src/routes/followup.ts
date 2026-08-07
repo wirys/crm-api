@@ -60,6 +60,11 @@ export const followupRoutes = new Elysia({ detail: { tags: ["Follow-up"] }, pref
             hoje: conv(hoje),
             proximas: conv(proximas),
         };
+    }, {
+        detail: {
+            summary: "Listar alertas de follow-up",
+            description: "Retorna três listas de atividades de follow-up (CRM_AtividadeRelatorio) com data de próximo contato definida: vencidas (data anterior a hoje), de hoje (data igual a hoje) e próximas (entre amanhã e os próximos 7 dias), cada uma ordenada pela data de próximo contato ascendente.",
+        },
     })
 
     .get("/alertas/count", async () => {
@@ -80,6 +85,11 @@ export const followupRoutes = new Elysia({ detail: { tags: ["Follow-up"] }, pref
             proximas: r.proximas ?? 0,
             total: (r.vencidas ?? 0) + (r.hoje ?? 0) + (r.proximas ?? 0),
         };
+    }, {
+        detail: {
+            summary: "Contar alertas de follow-up",
+            description: "Retorna a contagem de atividades de follow-up vencidas, do dia e próximas (nos próximos 7 dias), além do total somado, calculadas a partir de CRM_AtividadeRelatorio com data de próximo contato preenchida.",
+        },
     })
 
     .get("/por-representante", async () => {
@@ -100,4 +110,9 @@ export const followupRoutes = new Elysia({ detail: { tags: ["Follow-up"] }, pref
             ORDER BY u.Nome
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Obter follow-up agrupado por representante",
+            description: "Retorna, para cada representante ativo (flaAtivo = 1), a data da última atividade registrada, a data do próximo follow-up futuro mais próximo e a quantidade de atividades pendentes com próximo contato até 7 dias à frente, ordenado por nome do representante.",
+        },
     });

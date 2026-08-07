@@ -37,6 +37,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             },
             orderBy: { Cod: "asc" },
         });
+    }, {
+        detail: {
+            summary: "Listar segmentos de atuação",
+            description: "Retorna todos os segmentos de atuação (CRM_SegmentoAtuacao) cadastrados, com código e nome, ordenados pelo código."
+        }
     })
     .get("/statuses", async () => {
         return await prisma.cRM_Status.findMany({
@@ -47,6 +52,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             },
             orderBy: { Status: "asc" },
         });
+    }, {
+        detail: {
+            summary: "Listar status de contato",
+            description: "Retorna todos os status de contato (CRM_Status) cadastrados, com id, nome e cor, ordenados alfabeticamente."
+        }
     })
     .get("/origins", async () => {
         return await prisma.cRM_Origem.findMany({
@@ -57,6 +67,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             },
             orderBy: { Origem: "asc" },
         });
+    }, {
+        detail: {
+            summary: "Listar origens de contato",
+            description: "Retorna todas as origens de contato (CRM_Origem) cadastradas, com id, nome e cor, ordenadas alfabeticamente."
+        }
     })
     .get("/representatives", async () => {
         return await prisma.cRM_Usuario.findMany({
@@ -66,6 +81,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             },
             orderBy: { Nome: "asc" },
         });
+    }, {
+        detail: {
+            summary: "Listar representantes",
+            description: "Retorna todos os usuários (CRM_Usuario) com id e nome, ordenados alfabeticamente, usados como representantes de contatos."
+        }
     })
     .get("/representatives-full", async () => {
         return await prisma.cRM_Usuario.findMany({
@@ -76,6 +96,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             },
             orderBy: { Nome: "asc" },
         });
+    }, {
+        detail: {
+            summary: "Listar representantes com cor",
+            description: "Retorna todos os usuários (CRM_Usuario) com id, nome e cor associada (corHTML), ordenados alfabeticamente pelo nome."
+        }
     })
     .get("/", async ({ query, request }) => {
         const { userId, isAdmin } = getUserContext(request);
@@ -139,7 +164,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
     }, {
         query: t.Object({
             representatives: t.Optional(t.String())
-        })
+        }),
+        detail: {
+            summary: "Listar contatos",
+            description: "Retorna a lista de contatos (CRM_Contato) com dados de status, origem, representante, quantidade de propostas e próxima atividade agendada. Filtra por representantes informados na query (lista de ids separados por vírgula); se o usuário autenticado não for administrador (contexto obtido via getUserContext), a listagem é restrita apenas aos contatos do próprio usuário."
+        }
     })
     .get("/:id", async ({ params, set }) => {
         try {
@@ -161,7 +190,11 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             return { message: "Erro ao buscar contato." };
         }
     }, {
-        params: t.Object({ id: t.String() })
+        params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Obter contato por id",
+            description: "Retorna os dados completos de um contato (CRM_Contato) pelo id na URL, incluindo o endereço principal (CRM_Contato_Endereco com flaPrincipal = true, ou objeto vazio se não houver). Retorna 404 se o contato não existir."
+        }
     })
     .put(
         "/:id",
@@ -246,6 +279,10 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                     Complemento: t.Optional(t.String()),
                 }),
             }),
+            detail: {
+                summary: "Atualizar contato",
+                description: "Atualiza os dados cadastrais de um contato (CRM_Contato) identificado pelo id na URL, convertendo flags e datas (formato BR) recebidas como string. Se um endereço for informado, atualiza o endereço principal existente (flaPrincipal = true) ou cria um novo caso não exista."
+            }
         }
     )
     .post(
@@ -344,6 +381,10 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                     idUsuario: t.Optional(t.Number()),
                 }),
             }),
+            detail: {
+                summary: "Criar contato",
+                description: "Cria um novo contato (CRM_Contato) e seu endereço principal associado. Antes de criar, valida duplicidade de CPF (para TipoPessoa \"0\") ou CNPJ (para TipoPessoa \"1\"), retornando erro 400 caso já exista um contato com o mesmo documento."
+            }
         }
     )
     .patch(
@@ -372,6 +413,10 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                 IdStatus: t.Optional(t.Number()),
                 IdOrigem: t.Optional(t.Number()),
                 idRepresentante: t.Optional(t.Number()),
-            })
+            }),
+            detail: {
+                summary: "Atualizar campos parciais do contato",
+                description: "Atualiza parcialmente um contato (CRM_Contato) identificado pelo id na URL, permitindo alterar apenas IdStatus, IdOrigem e/ou idRepresentante. Usado para ações rápidas como mover status ou reatribuir representante."
+            }
         }
     );

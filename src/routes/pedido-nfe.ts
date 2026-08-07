@@ -140,6 +140,11 @@ export const pedidoNfeRoutes = new Elysia({ detail: { tags: ["Pedidos"] }, prefi
             console.error('Erro ao buscar pedidos:', error);
             return { data: [], meta: { page: 1, limit: 50, total: 0, hasMore: false }, error: error?.message };
         }
+    }, {
+        detail: {
+            summary: "Listar itens de pedidos/NFe com paginação e filtros",
+            description: "Retorna, com paginação (page/limit), os itens de pedidos abertos (CRM_PedidosAbertos_ItemExtra) com joins de proposta, contato, representante e todos os status gerais (estoque, financeiro, produção, expedição, prioridade, separação, setor, acerto de cor e envase). Permite filtrar por número da proposta, código do material, nome do representante, intervalo de data de envio (dtaInicio/dtaFim) e busca textual (search) em proposta, nome comercial, material, cliente e lote. Se o usuário não for admin (grupo 1, 2, 3, 5 ou 7), restringe automaticamente os resultados aos pedidos da carteira do representante (userId).",
+        },
     })
 
     .get("/statuses", async () => {
@@ -155,6 +160,11 @@ export const pedidoNfeRoutes = new Elysia({ detail: { tags: ["Pedidos"] }, prefi
             producao: all.filter((r: any) => r.flaProducao),
             expedicao: all.filter((r: any) => r.flaExpedicao),
         };
+    }, {
+        detail: {
+            summary: "Listar status gerais agrupados por categoria",
+            description: "Retorna todos os status cadastrados em CRM_StatusGeral, já agrupados em quatro listas (financeiro, estoque, producao, expedicao) conforme os flags flaFinanceiro, flaEstoque, flaProducao e flaExpedicao, para uso em selects de atualização de status de pedidos.",
+        },
     })
 
     .patch("/:id/status", async ({ params, body, set }) => {
@@ -179,6 +189,10 @@ export const pedidoNfeRoutes = new Elysia({ detail: { tags: ["Pedidos"] }, prefi
     }, {
         params: t.Object({ id: t.String() }),
         body: t.Object({ field: t.String(), idStatus: t.Number() }),
+        detail: {
+            summary: "Atualizar status de um item de pedido",
+            description: "Atualiza um campo de status específico de um item de pedido (CRM_PedidosAbertos_ItemExtra) identificado por :id. O campo a ser alterado (field) deve constar na lista de campos permitidos (idEstoqueStatus, idFinanceiroStatus, idProducaoStatus, idExpedicaoStatus, idPrioridadeStatus, idSetorStatus, idSeparacaoStatus, idAcertoCorStatus, idEnvaseStatus); requisições com outros campos retornam 400.",
+        },
     })
 
     .get("/filtros/representantes", async () => {
@@ -189,6 +203,11 @@ export const pedidoNfeRoutes = new Elysia({ detail: { tags: ["Pedidos"] }, prefi
             ORDER BY u.Nome
         `);
         return conv(reps);
+    }, {
+        detail: {
+            summary: "Listar representantes para filtro de pedidos",
+            description: "Retorna a lista distinta de usuários ativos (flaAtivo = 1) da tabela CRM_Usuario, contendo apenas idUsuario e Nome, ordenados por nome, para popular o filtro de representante na tela de pedidos/NFe.",
+        },
     })
 
     .get("/filtros/propostas", async () => {
@@ -199,4 +218,9 @@ export const pedidoNfeRoutes = new Elysia({ detail: { tags: ["Pedidos"] }, prefi
             ORDER BY PropostaNo DESC
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar números de proposta para filtro de pedidos",
+            description: "Retorna até 1000 números de proposta distintos e não vazios (PropostaNo) da tabela CRM_PedidosAbertos_ItemExtra, ordenados do mais recente para o mais antigo, para popular o filtro de proposta na tela de pedidos/NFe.",
+        },
     });

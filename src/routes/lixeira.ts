@@ -61,6 +61,10 @@ export const lixeiraRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix
             page:   t.Optional(t.String()),
             limit:  t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar contatos na lixeira",
+            description: "Retorna, de forma paginada, os contatos removidos armazenados em CRM_Contato_Lixeira, com busca opcional por nome, nome comercial ou CNPJ. Aceita page e limit para paginação (padrão página 1, limite 100) e retorna também o total de registros encontrados."
+        }
     })
 
     // ── POST /lixeira/contatos/:id/restaurar ─────────────────────────────────
@@ -72,6 +76,10 @@ export const lixeiraRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix
         };
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Restaurar contato da lixeira",
+            description: "Endpoint de restauração de um contato da lixeira (CRM_Contato_Lixeira) pelo id na URL. Atualmente não implementado: sempre retorna status 422 informando que a restauração automática não é suportada e que é necessário contatar o administrador."
+        }
     })
 
     // ── DELETE /lixeira/contatos/:id ──────────────────────────────────────────
@@ -89,4 +97,8 @@ export const lixeiraRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefix
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Excluir contato da lixeira permanentemente",
+            description: "Remove definitivamente um contato da tabela CRM_Contato_Lixeira pelo id informado na URL, sem possibilidade de restauração."
+        }
     });

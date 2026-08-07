@@ -55,6 +55,11 @@ export const ocorrenciasRoutes = new Elysia({ detail: { tags: ["Ocorrencias"] },
 
         const total = conv(countRows)[0]?.Total ?? 0;
         return { data: conv(rows), meta: { page: pageNum, limit: limitNum, total, hasMore: offset + limitNum < total } };
+    }, {
+        detail: {
+            summary: "Listar ocorrências",
+            description: "Retorna ocorrências com nome do contato e do usuário responsável, com paginação (page/limit) e filtros opcionais por tipo, status, intervalo de datas de criação (dtaInicio/dtaFim) e busca textual (search) no título, descrição ou nome comercial do contato. Retorna os dados paginados junto com metadados de total e indicação de mais páginas.",
+        },
     })
 
     .post("/", async ({ body, set }) => {
@@ -120,6 +125,10 @@ export const ocorrenciasRoutes = new Elysia({ detail: { tags: ["Ocorrencias"] },
             idUsuario: t.Number(),
             Prioridade: t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Criar ocorrência",
+            description: "Cria uma nova ocorrência com status inicial 'Aberta' e data de criação atual. Se a tabela CRM_Ocorrencia ainda não existir no banco, ela é criada automaticamente antes de inserir o registro (auto-provisionamento em caso de erro 'Invalid object name').",
+        },
     })
 
     .patch("/:id", async ({ params, body, set }) => {
@@ -147,6 +156,10 @@ export const ocorrenciasRoutes = new Elysia({ detail: { tags: ["Ocorrencias"] },
             Resolucao: t.Optional(t.String()),
             Prioridade: t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Atualizar ocorrência",
+            description: "Atualiza parcialmente uma ocorrência pelo id informado na URL, permitindo alterar status, resolução e/ou prioridade. Se o novo Status for 'Resolvida' ou 'Fechada', a data de resolução (dtaResolucao) é preenchida automaticamente com a data atual. A data de alteração é sempre atualizada.",
+        },
     })
 
     .delete("/:id", async ({ params, set }) => {
@@ -161,4 +174,8 @@ export const ocorrenciasRoutes = new Elysia({ detail: { tags: ["Ocorrencias"] },
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Excluir ocorrência",
+            description: "Exclui definitivamente uma ocorrência pelo id informado na URL.",
+        },
     });

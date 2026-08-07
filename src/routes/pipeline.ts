@@ -93,11 +93,20 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             dtaFim: t.Optional(t.String()),
             userId: t.Optional(t.String()),
             userGroup: t.Optional(t.String()),
-        })
+        }),
+        detail: {
+            summary: "Listar propostas do pipeline",
+            description: "Retorna as propostas comerciais (CRM_Proposta) que possuem número de proposta preenchido, com dados de status, representante, contato e condição de pagamento. Filtra por lista de idStatus (estagioProposta), por período de DataPossivel (dtaInicio/dtaFim) e restringe por usuário/representante quando o grupo do usuário não é administrativo (grupos 1, 2, 3, 5 e 7 têm acesso total)."
+        }
     })
     .get("/statuses", async () => {
         const statuses: any[] = await prisma.$queryRaw`SELECT idStatus, Status, CorHTML FROM CRM_Proposta_Status ORDER BY Status`;
         return statuses;
+    }, {
+        detail: {
+            summary: "Listar status de proposta",
+            description: "Retorna todos os status possíveis de propostas (CRM_Proposta_Status) com id, nome e cor associada, ordenados alfabeticamente pelo nome do status."
+        }
     })
     .get("/filter-options", async () => {
         const [representantes, contatos, statuses] = await Promise.all([
@@ -120,6 +129,11 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             prisma.$queryRawUnsafe(`SELECT idStatus, Status, CorHTML FROM CRM_Proposta_Status WITH (NOLOCK) ORDER BY Status`),
         ]);
         return { representantes, contatos, statuses };
+    }, {
+        detail: {
+            summary: "Listar opções de filtro do pipeline",
+            description: "Retorna, em paralelo, as listas distintas de representantes, contatos e status vinculados a propostas com número preenchido, para popular os filtros da tela de pipeline."
+        }
     })
     .get("/chart-data", async () => {
         const data: any[] = await prisma.$queryRaw`
@@ -134,10 +148,20 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             cor: d.CorHTML,
             frequencia: Number(d.Freq)
         }));
+    }, {
+        detail: {
+            summary: "Obter dados do gráfico de propostas por status",
+            description: "Agrupa todas as propostas (CRM_Proposta) por status, retornando o nome do status, a cor associada e a quantidade de propostas em cada status, ordenado do menor para o maior."
+        }
     })
     .get("/resumo-status", async () => {
         const data: any[] = await prisma.$queryRaw`EXEC sp_CRMResumoStatus`;
         return convertBigIntToNumber(data);
+    }, {
+        detail: {
+            summary: "Obter resumo de propostas por status",
+            description: "Executa a stored procedure sp_CRMResumoStatus, que retorna um resumo consolidado das propostas agrupadas por status."
+        }
     })
     .put("/status/:id", async ({ params, body }) => {
         const id = parseInt(params.id);
@@ -145,9 +169,44 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             where: { idProposta: id },
             data: { idStatus: body.idStatus }
         });
+
+        // idStatus 3 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
+        if (body.idStatus === 3) {
+            await prisma.$executeRawUnsafe(`
+                INSERT INTO CRM_PedidosAbertos_ItemExtra
+                    (idPropostaDetalhe, PropostaNo, dtaEnvio, nomComercial, NCM, CodMaterial, nomMaterial, codMaterialMatriz, Unidade, PesoEmbalagem, TTKG, TTCJ, Nome)
+                SELECT
+                    d.idPropostaDetalhe,
+                    p.PropostaNo,
+                    GETDATE(),
+                    ISNULL(NULLIF(c.nomComercial, ''), c.nomContato),
+                    m.NCM,
+                    m.CodMaterial,
+                    ISNULL(NULLIF(d.MaterialDescricao, ''), m.nomMaterial),
+                    m.codMaterialMatriz,
+                    m.Unidade,
+                    CAST(ISNULL(m.PesoEmbalagem, 0) AS VARCHAR(50)),
+                    CAST(ISNULL(m.PesoEmbalagem, 0) * ISNULL(d.Quantidade, 0) AS VARCHAR(50)),
+                    CAST(ISNULL(d.Quantidade, 0) AS VARCHAR(50))
+                FROM CRM_Proposta_Detalhe d
+                INNER JOIN CRM_Proposta p ON p.idProposta = d.idProposta
+                LEFT JOIN CRM_Contato c ON c.idContato = p.idContato
+                LEFT JOIN CRM_Produto_Material m ON m.idMaterial = d.idMaterial
+                WHERE d.idProposta = ${id}
+                    AND NOT EXISTS (
+                        SELECT 1 FROM CRM_PedidosAbertos_ItemExtra e
+                        WHERE e.idPropostaDetalhe = d.idPropostaDetalhe
+                    )
+            `);
+        }
+
         return { success: true };
     }, {
-        body: t.Object({ idStatus: t.Number() })
+        body: t.Object({ idStatus: t.Number() }),
+        detail: {
+            summary: "Atualizar status da proposta",
+            description: "Atualiza o idStatus de uma proposta (CRM_Proposta) pelo id na URL. Regra de negócio: quando o novo idStatus é 3 (\"Aprovado pelo cliente\"), os itens da proposta (CRM_Proposta_Detalhe) são automaticamente inseridos em CRM_PedidosAbertos_ItemExtra para envio à Produção, evitando duplicidade ao checar itens já existentes."
+        }
     })
     .put("/obs/:id", async ({ params, body }) => {
         const id = parseInt(params.id);
@@ -157,7 +216,11 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
         });
         return { success: true };
     }, {
-        body: t.Object({ obs: t.String() })
+        body: t.Object({ obs: t.String() }),
+        detail: {
+            summary: "Atualizar observação de checagem da proposta",
+            description: "Atualiza o campo ObsChecagem de uma proposta (CRM_Proposta) identificada pelo id na URL, com o texto informado no corpo da requisição."
+        }
     })
     .put("/possibilidade/:id", async ({ params, body }) => {
         const id = parseInt(params.id);
@@ -167,7 +230,11 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
         });
         return { success: true };
     }, {
-        body: t.Object({ valor: t.Number() })
+        body: t.Object({ valor: t.Number() }),
+        detail: {
+            summary: "Atualizar possibilidade de fechamento da proposta",
+            description: "Atualiza o campo Possibilidade (percentual/probabilidade de fechamento) de uma proposta (CRM_Proposta) identificada pelo id na URL."
+        }
     })
     .put("/ganho-estimado/:id", async ({ params, body }) => {
         const id = parseInt(params.id);
@@ -177,7 +244,11 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
         });
         return { success: true };
     }, {
-        body: t.Object({ valor: t.Number() })
+        body: t.Object({ valor: t.Number() }),
+        detail: {
+            summary: "Atualizar ganho estimado da proposta",
+            description: "Atualiza o campo GanhoEstimado (valor estimado de ganho) de uma proposta (CRM_Proposta) identificada pelo id na URL."
+        }
     })
     .put("/data-possivel/:id", async ({ params, body }) => {
         const id = parseInt(params.id);
@@ -187,7 +258,11 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
         });
         return { success: true };
     }, {
-        body: t.Object({ data: t.String() })
+        body: t.Object({ data: t.String() }),
+        detail: {
+            summary: "Atualizar data possível de fechamento da proposta",
+            description: "Atualiza o campo DataPossivel de uma proposta (CRM_Proposta) identificada pelo id na URL. Se a data informada for vazia, o campo é definido como nulo."
+        }
     })
     .delete("/:id", async ({ params }) => {
         const id = parseInt(params.id);
@@ -195,4 +270,9 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             where: { idProposta: id }
         });
         return { success: true };
+    }, {
+        detail: {
+            summary: "Excluir proposta",
+            description: "Remove definitivamente uma proposta (CRM_Proposta) do banco de dados a partir do id informado na URL."
+        }
     });

@@ -68,6 +68,10 @@ export const rastreamentoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, 
             userId:    t.Optional(t.String()),
             userGroup: t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar rastreios de expedição",
+            description: "Retorna a lista de códigos de rastreio das propostas, com dados do cliente e status de envio da mensagem de WhatsApp. Permite filtrar por período de cadastro (`dtaInicio`/`dtaFim`) e por busca textual (`search`) no código de rastreio, número da proposta ou nome do cliente. Se o usuário não pertencer a um grupo administrativo (idGrupo 1, 2, 3, 5 ou 7), os resultados são restritos aos registros do próprio representante (`userId`).",
+        },
     })
 
     // ── PATCH /rastreamento/:id/enviada ───────────────────────────────────────
@@ -87,4 +91,8 @@ export const rastreamentoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, 
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ flaMsgEnviada: t.Boolean() }),
+        detail: {
+            summary: "Atualizar status de envio da mensagem de rastreio",
+            description: "Marca o registro de rastreamento identificado por `id` como enviado (`flaMsgEnviada = 1`) ou não enviado (`flaMsgEnviada = 0`), refletindo se a mensagem de WhatsApp com o código de rastreio já foi enviada ao cliente.",
+        },
     });

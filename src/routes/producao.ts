@@ -143,6 +143,10 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
             page:        t.Optional(t.String()),
             limit:       t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar itens de produção em andamento",
+            description: "Retorna, de forma paginada, os itens de pedidos (CRM_PedidosAbertos_ItemExtra) ainda não concluídos (dtaFinalEfetiva IS NULL), com dados de proposta, cliente, representante e status de produção/separação/prioridade/setor/etc. Aceita busca textual (proposta, cliente, material, lote), filtros por número de proposta, código de material e lote, além de page/limit. Vendedores (userGroup fora de 1,2,3,5,7) só visualizam itens da própria carteira de clientes.",
+        },
     })
 
     // ── GET /producao/filter-options ──────────────────────────────────────────
@@ -163,6 +167,11 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
             lotes:     conv(lotes).map((r: any) => r.Lote),
             materiais: conv(materiais),
         };
+    }, {
+        detail: {
+            summary: "Listar opções de filtro de produção",
+            description: "Retorna, em paralelo, a lista distinta de lotes e a lista distinta de materiais (código e nome) presentes em CRM_PedidosAbertos_ItemExtra, usadas para popular os filtros da tela de produção.",
+        },
     })
 
     // ── GET /producao/statuses ────────────────────────────────────────────────
@@ -196,6 +205,11 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
             acertoCor:  all.filter((r: any) => r.flaAcertoCor),
             envase:     all.filter((r: any) => r.flaEnvase),
         };
+    }, {
+        detail: {
+            summary: "Listar status por categoria de produção",
+            description: "Retorna todos os status gerais (CRM_StatusGeral) já classificados por categoria (producao, separacao, estoque, financeiro, prioridade, setor, acertoCor, envase) com base nas flags fla* de cada registro, incluindo id, descrição e cor em HTML de cada status.",
+        },
     })
 
     // ── GET /producao/concluidos ──────────────────────────────────────────────
@@ -245,6 +259,10 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
             page:      t.Optional(t.String()),
             limit:     t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar itens de produção concluídos",
+            description: "Retorna, de forma paginada, os itens de pedidos (CRM_PedidosAbertos_ItemExtra) já concluídos (dtaFinalEfetiva IS NOT NULL), ordenados pela data de conclusão mais recente. Aceita busca textual, filtro por período de conclusão (dtaInicio/dtaFim) e page/limit. Vendedores (userGroup fora de 1,2,3,5,7) só visualizam itens da própria carteira de clientes.",
+        },
     })
 
     // ── PATCH /producao/:id/status ────────────────────────────────────────────
@@ -270,6 +288,10 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ field: t.String(), idStatus: t.Number() }),
+        detail: {
+            summary: "Atualizar campo de status de um item de produção",
+            description: "Atualiza um dos campos de status (idProducaoStatus, idSeparacaoStatus, idEstoqueStatus, idFinanceiroStatus, idPrioridadeStatus, idSetorStatus, idAcertoCorStatus ou idEnvaseStatus) do item :id em CRM_PedidosAbertos_ItemExtra. O nome do campo é validado contra uma lista de campos permitidos (ALLOWED_STATUS_FIELDS); campos fora dessa lista retornam erro 400.",
+        },
     })
 
     // ── PATCH /producao/:id/concluir ──────────────────────────────────────────
@@ -287,4 +309,8 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Concluir item de produção",
+            description: "Marca o item :id de CRM_PedidosAbertos_ItemExtra como concluído, gravando a data/hora atual (GETDATE) no campo dtaFinalEfetiva. Esse campo é o que determina se o item aparece na listagem de itens em andamento ou de concluídos.",
+        },
     });

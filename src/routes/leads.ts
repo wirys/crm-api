@@ -121,7 +121,11 @@ export const leadsRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: 
             search:         t.Optional(t.String()),
             userId:         t.Optional(t.String()),
             userGroup:      t.Optional(t.String()),
-        })
+        }),
+        detail: {
+            summary: "Listar leads/contatos do pipeline",
+            description: "Retorna a lista de contatos (leads) com joins de status, origem, representante, endereço principal, contagem de propostas e próxima atividade agendada. Permite filtrar por representantes, status e origem (listas separadas por vírgula), além de busca textual em nome, nome comercial, CNPJ, código de cliente, e-mail e telefone. Se o usuário não for admin (grupo 1, 2, 3, 5 ou 7) e nenhum filtro de representante for informado, restringe automaticamente os resultados à carteira do próprio usuário (userId).",
+        },
     })
 
     // PATCH /leads/:id
@@ -142,6 +146,11 @@ export const leadsRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: 
             console.error("[leads] patch error:", error);
             return { status: 400, error: String(error) };
         }
+    }, {
+        detail: {
+            summary: "Atualizar status, origem ou representante de um lead",
+            description: "Atualiza parcialmente um contato (lead) identificado por :id, alterando status (idStatus), origem (idOrigem) e/ou representante responsável (idRepresentante). Apenas os campos enviados no corpo da requisição são atualizados. Retorna erro 400 caso nenhum campo válido seja informado.",
+        },
     })
 
     // DELETE /leads/:id
@@ -152,6 +161,11 @@ export const leadsRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix: 
         } catch (error) {
             return { status: 400, error: String(error) };
         }
+    }, {
+        detail: {
+            summary: "Excluir lead/contato",
+            description: "Remove definitivamente um contato (lead) do banco de dados a partir do :id informado na URL. Não realiza soft delete; a exclusão é física na tabela CRM_Contato.",
+        },
     });
 
 // ─── Representantes ─────────────────────────────────────────────────────────
@@ -176,6 +190,11 @@ export const representativesRoutes = new Elysia({ detail: { tags: ["Pipeline"] }
             console.error("[representatives] error:", error);
             return [];
         }
+    }, {
+        detail: {
+            summary: "Listar representantes com total de contatos",
+            description: "Retorna todos os usuários ativos (flaAtivo = 1) que atuam como representantes, incluindo nome, imagem, e-mail e a contagem total de contatos (leads) vinculados a cada um, ordenados por nome.",
+        },
     });
 
 // ─── Status ─────────────────────────────────────────────────────────────────
@@ -190,6 +209,11 @@ export const statusRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix:
             console.error("[status] error:", error);
             return { status: 400, data: [] };
         }
+    }, {
+        detail: {
+            summary: "Listar status do pipeline",
+            description: "Retorna todos os status cadastrados (CRM_Status), incluindo nome e cor (CorHTML), ordenados alfabeticamente, para uso em filtros e badges do pipeline de leads.",
+        },
     });
 
 // ─── Origem ─────────────────────────────────────────────────────────────────
@@ -204,4 +228,9 @@ export const origemRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefix:
             console.error("[origem] error:", error);
             return { status: 400, data: [] };
         }
+    }, {
+        detail: {
+            summary: "Listar origens do pipeline",
+            description: "Retorna todas as origens de lead cadastradas (CRM_Origem), incluindo nome e cor (CorHTML), ordenadas alfabeticamente, para uso em filtros e badges do pipeline de leads.",
+        },
     });

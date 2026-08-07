@@ -51,4 +51,8 @@ export const estoqueImportRoutes = new Elysia({ detail: { tags: ["Estoque"] }, p
                 Unidade: t.Optional(t.String()),
             })),
         }),
+        detail: {
+            summary: "Importar estoque em lote",
+            description: "Substitui integralmente o conteúdo da tabela CRM_Estoque (TRUNCATE) e insere os itens recebidos em `dados` (Código, Descrição, Saldo e Unidade), processando em lotes de 500 registros por INSERT. Retorna o total de linhas importadas.",
+        },
     });

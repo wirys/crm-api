@@ -53,6 +53,10 @@ export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/a
             idRepresentanteDestino: t.Number(),
             idContatos: t.Array(t.Number()),
         }),
+        detail: {
+            summary: "Transferir carteira de contatos entre representantes",
+            description: "Move em lote os contatos informados em idContatos do representante de origem (idRepresentanteOrigem) para o representante de destino (idRepresentanteDestino), atualizando idRepresentante e dtaAlteracao na tabela CRM_Contato. A transferência só é aplicada aos contatos que efetivamente pertenciam ao representante de origem. Registra a operação na tabela CRM_Log com a quantidade de contatos transferidos.",
+        },
     })
 
     .get("/carteira/:idRepresentante", async ({ params }) => {
@@ -66,6 +70,10 @@ export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/a
         return conv(rows);
     }, {
         params: t.Object({ idRepresentante: t.String() }),
+        detail: {
+            summary: "Listar carteira de contatos de um representante",
+            description: "Retorna os contatos ativos (flaAtivo = 1 ou nulo) vinculados ao representante identificado por :idRepresentante, incluindo nome comercial, CNPJ, telefone, e-mail e data de cadastro, ordenados por nome comercial.",
+        },
     })
 
     .get("/representantes", async () => {
@@ -77,6 +85,11 @@ export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/a
             ORDER BY u.Nome
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar representantes ativos",
+            description: "Retorna todos os usuários ativos (flaAtivo = 1) da tabela CRM_Usuario, incluindo nome, e-mail, grupo e a contagem de contatos (CarteiraCont) vinculados a cada um, ordenados por nome.",
+        },
     })
 
     .post("/convite", async ({ body, set }) => {
@@ -106,6 +119,10 @@ export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/a
             idGrupo: t.Number(),
             idUsuarioCadastro: t.Number(),
         }),
+        detail: {
+            summary: "Criar convite de ativação de usuário",
+            description: "Gera um convite de ativação para um novo usuário, criando um registro em CRM_UsuarioAtivacao com e-mail, nível de acesso (idGrupo), usuário responsável pelo cadastro (idUsuarioCadastro) e um GUID único (GUIDUsuario) usado posteriormente para validar a ativação da conta.",
+        },
     })
 
     .get("/convites", async () => {
@@ -116,6 +133,11 @@ export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/a
             ORDER BY a.dtaCadastro DESC
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar convites de ativação enviados",
+            description: "Retorna todos os convites de ativação de usuário (CRM_UsuarioAtivacao) já cadastrados, incluindo o nome do usuário que realizou o cadastro (join com CRM_Usuario), ordenados do mais recente para o mais antigo.",
+        },
     })
 
     .get("/log", async ({ query }) => {
@@ -146,4 +168,9 @@ export const adminRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: "/a
 
         const total = conv(countRows)[0]?.Total ?? 0;
         return { data: conv(rows), meta: { page: pageNum, limit: limitNum, total, hasMore: offset + limitNum < total } };
+    }, {
+        detail: {
+            summary: "Listar log de atividades administrativas",
+            description: "Retorna, com paginação (query params page e limit), os registros da tabela CRM_Log incluindo o nome do usuário responsável (join com CRM_Usuario), ordenados da atividade mais recente para a mais antiga. Permite filtrar por idUsuario e por busca textual (search) nos campos Atividade e Ocorrencia. Retorna também metadados de paginação (total de registros e indicador hasMore).",
+        },
     });

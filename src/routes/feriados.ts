@@ -32,6 +32,11 @@ export const feriadosRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: 
             ORDER BY data ASC
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar feriados",
+            description: "Retorna a lista de feriados cadastrados, ordenados por data ascendente. Permite filtrar opcionalmente por ano através do parâmetro de query 'ano'.",
+        },
     })
 
     .post("/", async ({ body, set }) => {
@@ -51,6 +56,10 @@ export const feriadosRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: 
             data: t.String(),
             feriado: t.String(),
         }),
+        detail: {
+            summary: "Criar feriado",
+            description: "Cadastra um novo feriado com a data e a descrição/nome informados no corpo da requisição.",
+        },
     })
 
     .patch("/:id", async ({ params, body, set }) => {
@@ -75,6 +84,10 @@ export const feriadosRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: 
             data: t.Optional(t.String()),
             feriado: t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Atualizar feriado",
+            description: "Atualiza parcialmente um feriado pelo id informado na URL. Apenas os campos data e/ou feriado enviados no corpo são alterados.",
+        },
     })
 
     .delete("/:id", async ({ params, set }) => {
@@ -89,4 +102,8 @@ export const feriadosRoutes = new Elysia({ detail: { tags: ["Admin"] }, prefix: 
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Excluir feriado",
+            description: "Exclui definitivamente um feriado pelo id informado na URL.",
+        },
     });

@@ -43,6 +43,11 @@ export const proposalsRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pre
         `);
 
         return convertBigIntToNumber(rows);
+    }, {
+        detail: {
+            summary: "Listar propostas de um contato",
+            description: "Retorna todas as propostas comerciais vinculadas ao contato informado no parâmetro id da URL, com UF do difal, status e cor do status, ordenadas pela data de criação mais recente primeiro.",
+        },
     })
     .get("/contact-info/:id", async ({ params }) => {
         const contactId = parseInt(params.id);
@@ -57,6 +62,11 @@ export const proposalsRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pre
         });
 
         return convertBigIntToNumber({ ...contact, address });
+    }, {
+        detail: {
+            summary: "Obter dados do contato para proposta",
+            description: "Busca os dados cadastrais do contato pelo id informado na URL e retorna, junto, o endereço marcado como principal (flaPrincipal = true) desse contato. Retorna null caso o contato não exista.",
+        },
     })
     .post("/", async ({ body }) => {
         const { idContato, idUsuario, UF } = body;
@@ -92,7 +102,11 @@ export const proposalsRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pre
             idContato: t.Number(),
             idUsuario: t.Number(),
             UF: t.String()
-        })
+        }),
+        detail: {
+            summary: "Criar proposta",
+            description: "Cria uma nova proposta comercial para o contato informado. Determina automaticamente o idDifal pela UF informada (usa 0 se nenhum registro de difal for encontrado) e inicializa a proposta com status idStatus = 1, valores zerados e observação padrão 'Frete'.",
+        },
     })
     .delete("/:id", async ({ params, request, set }) => {
         const id = parseInt(params.id);
@@ -111,4 +125,9 @@ export const proposalsRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pre
             where: { idProposta: id }
         });
         return { success: true };
+    }, {
+        detail: {
+            summary: "Excluir proposta",
+            description: "Exclui definitivamente a proposta pelo id informado na URL. Se a proposta já estiver em checagem (idStatus >= 2), a exclusão só é permitida para usuários cujo grupo (enviado no header x-user-group) esteja entre os grupos com permissão de checagem (1, 2, 3, 4, 5 ou 7); caso contrário retorna 403.",
+        },
     });

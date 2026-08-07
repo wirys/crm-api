@@ -137,6 +137,10 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
                 email: t.String(),
                 password: t.String(),
             }),
+            detail: {
+                summary: "Autenticar usuário",
+                description: "Realiza o login validando email e senha (hash SHA-256 em base64, compatível com a base legada em VB.NET) contra a tabela CRM_Usuario. Rejeita usuários não encontrados, inativos (flaAtivo) ou com senha incorreta. Em caso de sucesso, atualiza a data do último login, registra a atividade em CRM_Log e retorna um token JWT contendo dados do usuário, grupo e permissões.",
+            },
         }
     )
     .post(
@@ -228,5 +232,9 @@ export const authRoutes = new Elysia({ prefix: "/auth", detail: { tags: ["Auth"]
             body: t.Object({
                 idUsuario: t.Number(),
             }),
+            detail: {
+                summary: "Personificar usuário (impersonate)",
+                description: "Permite que um super administrador (idGrupo 1, 2 ou 3, identificado pelos headers `x-user-id` e `x-user-group`) gere um token JWT em nome de outro usuário (`idUsuario` no corpo), para fins de suporte/depuração. Valida que o alvo exista e seja diferente do próprio admin, registra a ação em CRM_Log e retorna o token com o campo `impersonatedBy` preenchido.",
+            },
         }
     );

@@ -37,6 +37,10 @@ export const perfilRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix:
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Obter perfil de usuário",
+            description: "Retorna os dados de perfil do usuário pelo id informado na URL, omitindo o campo Senha da resposta. Retorna erro 404 caso o usuário não seja encontrado.",
+        },
     })
 
     // ── PATCH /perfil/:id ─────────────────────────────────────────────────────
@@ -69,6 +73,10 @@ export const perfilRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix:
             Telefone: t.Optional(t.String()),
             Titulo:   t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Atualizar perfil de usuário",
+            description: "Atualiza parcialmente os dados de perfil (Nome, Email, Telefone, Titulo) do usuário pelo id informado na URL, alterando apenas os campos enviados no corpo. A resposta omite o campo Senha.",
+        },
     })
 
     // ── PATCH /perfil/:id/senha ───────────────────────────────────────────────
@@ -107,4 +115,8 @@ export const perfilRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix:
             senhaAtual: t.String(),
             novaSenha:  t.String(),
         }),
+        detail: {
+            summary: "Alterar senha do usuário",
+            description: "Altera a senha do usuário pelo id informado na URL. Valida se a senhaAtual enviada confere (comparação em texto puro) com a senha armazenada antes de gravar a novaSenha via UPDATE direto na tabela CRM_Usuario; retorna 404 se o usuário não existir e 401 se a senha atual estiver incorreta.",
+        },
     });

@@ -135,6 +135,8 @@ export const app = new Elysia()
                 { name: 'Admin', description: 'Painel administrativo' },
                 { name: 'Dashboard', description: 'Indicadores e estatisticas' },
                 { name: 'Usuarios', description: 'Gestao de usuarios' },
+                { name: 'Perfis', description: 'Perfis de acesso e permissoes' },
+                { name: 'Follow-up', description: 'Acompanhamento de follow-up de contatos' },
                 { name: 'API Pública - Propostas', description: 'Endpoints públicos de propostas com rate limiting (30 req/min para acesso externo)' },
             ],
         }

@@ -78,6 +78,11 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
         const atividadesVencidas = conv(atividadesVencidasRows as any[])[0]?.Total ?? 0;
 
         return { totalPropostas, totalContatos, propostasPorStatus, atividadesHoje, atividadesVencidas };
+    }, {
+        detail: {
+            summary: "Obter visão geral do dashboard",
+            description: "Retorna indicadores gerais: total de propostas, total de contatos ativos (exclui contatos com status de Lixeira/Excluído/Deletado), propostas agrupadas por status com valor somado, atividades com follow-up para hoje e atividades vencidas. Se o usuário autenticado não for admin, os dados são restritos às propostas/contatos/atividades do próprio representante.",
+        },
     })
 
     // ── GET /dashboard-stats/propostas-por-mes ────────────────────────────────
@@ -99,6 +104,11 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             ORDER BY Ano, Mes
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Obter propostas agrupadas por mês",
+            description: "Retorna a quantidade e o valor total de propostas criadas em cada um dos últimos 12 meses (mês atual incluído), agrupados por ano e mês. Se o usuário autenticado não for admin, restringe o resultado às propostas dos contatos do próprio representante.",
+        },
     })
 
     // ── GET /dashboard-stats/representantes ───────────────────────────────────
@@ -121,6 +131,11 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             ORDER BY SUM(ISNULL(p.TotalValor, 0)) DESC
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Ranking de representantes por valor de propostas",
+            description: "Retorna o top 10 representantes com maior valor total de propostas, com a quantidade de propostas e o valor somado, ordenados do maior para o menor valor. Se o usuário autenticado não for admin, o resultado é restrito ao próprio representante.",
+        },
     })
 
     // ── GET /dashboard-stats/consolidado ─────────────────────────────────────
@@ -149,4 +164,8 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             ano:       t.Optional(t.String()),
             mes:       t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar atividades consolidadas",
+            description: "Retorna registros da tabela de atividades consolidadas (CRM_AtividadeConsolidada), ordenados pela data de referência mais recente primeiro. Se o usuário não for admin, filtra automaticamente pelo próprio idUsuario; caso seja admin, pode filtrar por idUsuario informado na query. Também permite filtrar por ano e mês de referência.",
+        },
     });

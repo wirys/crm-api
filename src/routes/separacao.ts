@@ -82,6 +82,10 @@ export const separacaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             userId:        t.Optional(t.String()),
             userGroup:     t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Listar itens pendentes de separação",
+            description: "Retorna os itens de pedidos (CRM_PedidosAbertos_ItemExtra) ainda não concluídos (dtaFinalEfetiva IS NULL), com dados de proposta, material, status de separação/produção e representante, ordenados pela data de entrega. Aceita busca textual, filtro por período de entrega (dtaInicio/dtaFim) e por representante. Vendedores (userGroup fora de 1,2,3,5,7) só visualizam itens da própria carteira de clientes.",
+        },
     })
 
     // ── GET /separacao/statuses ───────────────────────────────────────────────
@@ -93,6 +97,11 @@ export const separacaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             ORDER BY id
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar status de separação",
+            description: "Retorna os status gerais (CRM_StatusGeral) marcados com a flag flaSeparacao = 1 (id, descrição e cor em HTML), usados para popular o filtro/legenda de status na tela de separação.",
+        },
     })
 
     // ── PATCH /separacao/:id/status ───────────────────────────────────────────
@@ -112,4 +121,8 @@ export const separacaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ idStatus: t.Number() }),
+        detail: {
+            summary: "Atualizar status de separação de um item",
+            description: "Atualiza o campo idSeparacaoStatus do item :id em CRM_PedidosAbertos_ItemExtra, refletindo o novo status de separação selecionado.",
+        },
     });

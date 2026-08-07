@@ -25,6 +25,11 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
             ORDER BY dtaCriacao DESC
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar últimas tabelas de preço importadas",
+            description: "Retorna as 10 últimas tabelas de preço cadastradas em tbTabelaPreco (id, usuário, nome/tipo/caminho do arquivo, data de criação e status), ordenadas da mais recente para a mais antiga.",
+        },
     })
 
     .get("/:id/dados", async ({ params }) => {
@@ -33,6 +38,11 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
             EXEC sp_CRMTabelaPrecoImportada
         `);
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Obter dados importados de uma tabela de preço",
+            description: "Executa a stored procedure sp_CRMTabelaPrecoImportada e retorna os dados já importados para exibição/conferência. O parâmetro :id identifica a tabela de preço, embora a procedure atual não o utilize diretamente.",
+        },
     })
 
     .post("/upload", async ({ body, set }) => {
@@ -62,6 +72,10 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
             fileType: t.String(),
             userId: t.String(),
         }),
+        detail: {
+            summary: "Registrar upload de tabela de preço",
+            description: "Cria um novo registro em tbTabelaPreco com status 'Arquivo Importado', associando o nome/tipo do arquivo enviado e o usuário responsável. Gera um nome de arquivo de sistema único baseado em timestamp; não realiza o upload físico do arquivo, apenas o registro de metadados.",
+        },
     })
 
     .post("/:id/importar", async ({ params, body, set }) => {
@@ -104,6 +118,10 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
                 valor: t.String(),
             })),
         }),
+        detail: {
+            summary: "Importar dados de uma tabela de preço",
+            description: "Trunca a tabela tbTabelaPrecoImport e insere os dados recebidos (linha, coluna, valor) em lotes de até 500 registros via INSERT com UNION ALL. Ao final, atualiza o status da tabela de preço :id em tbTabelaPreco para 'Importado'. Note que o truncate afeta todas as tabelas de preço, não apenas a informada em :id.",
+        },
     })
 
     .post("/:id/publicar", async ({ params, set }) => {
@@ -126,6 +144,10 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Publicar tabela de preço",
+            description: "Executa a stored procedure sp_CRMTabelaPrecoPublicar (mesma rotina do sistema legado) para publicar os dados importados, e atualiza o status da tabela de preço :id em tbTabelaPreco para 'Tabela Publicada'.",
+        },
     })
 
     .delete("/:id", async ({ params, set }) => {
@@ -141,4 +163,8 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         }
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Excluir tabela de preço",
+            description: "Remove os dados importados relacionados em tbTabelaPrecoImport (filtrando por idTabelaPreco) e em seguida exclui o registro da tabela de preço :id em tbTabelaPreco.",
+        },
     });

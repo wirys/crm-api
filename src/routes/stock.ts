@@ -51,5 +51,9 @@ export const stockRoutes = new Elysia({ detail: { tags: ["Estoque"] }, prefix: '
             page: t.Optional(t.String()),
             limit: t.Optional(t.String()),
             search: t.Optional(t.String())
-        })
+        }),
+        detail: {
+            summary: "Listar estoque",
+            description: "Retorna a lista paginada de itens de estoque (CRM_Estoque), cruzados com o NCM cadastrado em CRM_Produto_Material. Aceita `page`, `limit` (padrão 50) e `search`, que filtra por descrição ou código do material. Inclui metadados de paginação (`total`, `hasMore`).",
+        }
     });

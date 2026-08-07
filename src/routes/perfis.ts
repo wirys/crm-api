@@ -44,6 +44,11 @@ export const perfisRoutes = new Elysia({ detail: { tags: ["Perfis"] }, prefix: "
         } catch (e: any) {
             return { error: e.message };
         }
+    }, {
+        detail: {
+            summary: "Listar perfis de acesso",
+            description: "Retorna todos os perfis/grupos de acesso (CRM_Grupo), incluindo a quantidade de usuários vinculados a cada perfil e as permissões (campo Permissoes) já convertidas de JSON para objeto, ordenados por idGrupo.",
+        },
     })
 
     // GET /:id - Get single group
@@ -71,6 +76,11 @@ export const perfisRoutes = new Elysia({ detail: { tags: ["Perfis"] }, prefix: "
             set.status = 500;
             return { error: e.message };
         }
+    }, {
+        detail: {
+            summary: "Obter perfil de acesso por ID",
+            description: "Retorna os dados de um único perfil/grupo de acesso (CRM_Grupo) identificado por :id, incluindo a contagem de usuários vinculados e as permissões convertidas de JSON para objeto. Retorna 404 caso o perfil não exista.",
+        },
     })
 
     // POST / - Create new group
@@ -101,6 +111,11 @@ export const perfisRoutes = new Elysia({ detail: { tags: ["Perfis"] }, prefix: "
             set.status = 500;
             return { error: e.message };
         }
+    }, {
+        detail: {
+            summary: "Criar novo perfil de acesso",
+            description: "Cria um novo perfil/grupo de acesso (CRM_Grupo) com nome (Grupo) e objeto de permissões (Permissoes, serializado como JSON). O idGrupo é calculado automaticamente como o maior idGrupo existente + 1. Todas as colunas de menu (Menu01-Menu08) e Painel são inicializadas com 0. Retorna 400 caso o nome do perfil não seja informado.",
+        },
     })
 
     // PUT /:id - Update group
@@ -152,6 +167,11 @@ export const perfisRoutes = new Elysia({ detail: { tags: ["Perfis"] }, prefix: "
             set.status = 500;
             return { error: e.message };
         }
+    }, {
+        detail: {
+            summary: "Atualizar perfil de acesso",
+            description: "Atualiza parcialmente um perfil/grupo de acesso (CRM_Grupo) identificado por :id, permitindo alterar o nome (Grupo) e/ou as permissões (Permissoes, serializado como JSON). Retorna 404 se o perfil não existir e 400 se nenhum campo for informado. Retorna o registro atualizado com as permissões já convertidas para objeto.",
+        },
     })
 
     // DELETE /:id - Delete group
@@ -192,4 +212,9 @@ export const perfisRoutes = new Elysia({ detail: { tags: ["Perfis"] }, prefix: "
             set.status = 500;
             return { error: e.message };
         }
+    }, {
+        detail: {
+            summary: "Excluir perfil de acesso",
+            description: "Remove um perfil/grupo de acesso (CRM_Grupo) identificado por :id. Bloqueia a exclusão de perfis de sistema (idGrupo 1, 2 ou 3) retornando 403, retorna 404 se o perfil não existir, e retorna 409 caso existam usuários vinculados ao perfil (CRM_Usuario.idGrupo).",
+        },
     });

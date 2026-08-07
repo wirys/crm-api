@@ -94,7 +94,11 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             search:        t.Optional(t.String()),
             userId:        t.Optional(t.String()),
             userGroup:     t.Optional(t.String()),
-        })
+        }),
+        detail: {
+            summary: "Listar propostas em expedição",
+            description: "Lista propostas com PropostaNo gerado, idStatus >= 3 e fora dos status 4/5 (não concluídas). Suporta filtros por status, representante, período de criação e busca textual por número, cliente ou CNPJ. Usuários fora dos grupos administrativos (1,2,3,5,7) só veem propostas da própria carteira.",
+        },
     })
 
     // ── GET /expedicao/concluidos ── propostas concluídas (idStatus 4 ou 5) ────
@@ -165,7 +169,11 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             search:        t.Optional(t.String()),
             userId:        t.Optional(t.String()),
             userGroup:     t.Optional(t.String()),
-        })
+        }),
+        detail: {
+            summary: "Listar propostas concluídas",
+            description: "Lista propostas com idStatus 4 ou 5 (concluídas/canceladas). Suporta filtros por representante, período de criação e busca textual por número, cliente ou CNPJ. Usuários fora dos grupos administrativos (1,2,3,5,7) só veem propostas da própria carteira.",
+        },
     })
 
     // ── GET /expedicao/filter-options ─────────────────────────────────────────
@@ -182,6 +190,11 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             statuses:       conv(statuses).map((s: any) => ({ value: String(s.idStatus), label: s.Status, cor: s.CorHTML })),
             representantes: conv(reps).map((r: any) => ({ value: String(r.idUsuario), label: r.Nome })),
         };
+    }, {
+        detail: {
+            summary: "Listar opções de filtro da expedição",
+            description: "Retorna a lista de status de proposta com idStatus >= 3 e a lista de usuários ativos, formatadas como opções (value/label) para os filtros de status e representante das telas de expedição.",
+        },
     })
 
     // ── GET /expedicao/:id/rastreios ──────────────────────────────────────────
@@ -203,7 +216,13 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             ORDER BY DtaCadastro DESC
         `);
         return conv(rows);
-    }, { params: t.Object({ id: t.String() }) })
+    }, {
+        params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Listar rastreios de uma proposta",
+            description: "Retorna todos os registros de rastreamento (CRM_ExpedicaoRastreio) de uma proposta, incluindo código, URL, mensagem, WhatsApp e status de envio, ordenados do mais recente para o mais antigo.",
+        },
+    })
 
     // ── POST /expedicao/:id/rastreio ──────────────────────────────────────────
     .post("/:id/rastreio", async ({ params, body, set }) => {
@@ -231,6 +250,10 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             RastreioMsg:    t.Optional(t.String()),
             WhatsApp:       t.Optional(t.String()),
         }),
+        detail: {
+            summary: "Adicionar rastreio à proposta",
+            description: "Insere um novo registro de rastreamento (CRM_ExpedicaoRastreio) associado à proposta, com código de rastreio, URL, mensagem e WhatsApp, marcado inicialmente como não enviado (flaMsgEnviada = 0).",
+        },
     })
 
     // ── DELETE /expedicao/rastreio/:rastreioId ────────────────────────────────
@@ -244,7 +267,13 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             set.status = 500;
             return { error: "Erro ao remover rastreio" };
         }
-    }, { params: t.Object({ rastreioId: t.String() }) })
+    }, {
+        params: t.Object({ rastreioId: t.String() }),
+        detail: {
+            summary: "Excluir rastreio",
+            description: "Remove definitivamente um registro de rastreamento (CRM_ExpedicaoRastreio) pelo seu id.",
+        },
+    })
 
     // ── GET /expedicao/:id/arquivos ───────────────────────────────────────────
     .get("/:id/arquivos", async ({ params }) => {
@@ -260,7 +289,13 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             ORDER BY dtaCriacao DESC
         `);
         return conv(rows);
-    }, { params: t.Object({ id: t.String() }) })
+    }, {
+        params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Listar arquivos de uma proposta",
+            description: "Retorna todos os arquivos anexados (CRM_ExpedicaoArquivo) a uma proposta, com nome, tipo e caminho, ordenados do mais recente para o mais antigo.",
+        },
+    })
 
     // ── POST /expedicao/:id/arquivo ───────────────────────────────────────────
     .post("/:id/arquivo", async ({ params, body, set }) => {
@@ -281,7 +316,13 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             set.status = 500;
             return { error: "Erro ao salvar arquivo" };
         }
-    }, { params: t.Object({ id: t.String() }) })
+    }, {
+        params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Anexar arquivo à proposta",
+            description: "Registra um novo arquivo (CRM_ExpedicaoArquivo) vinculado à proposta, armazenando nome, tipo, caminho e usuário responsável pelo upload.",
+        },
+    })
 
     // ── DELETE /expedicao/arquivo/:arquivoId ──────────────────────────────────
     .delete("/arquivo/:arquivoId", async ({ params, set }) => {
@@ -294,7 +335,13 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             set.status = 500;
             return { error: "Erro ao remover arquivo" };
         }
-    }, { params: t.Object({ arquivoId: t.String() }) })
+    }, {
+        params: t.Object({ arquivoId: t.String() }),
+        detail: {
+            summary: "Excluir arquivo",
+            description: "Remove definitivamente um arquivo anexado (CRM_ExpedicaoArquivo) pelo seu id.",
+        },
+    })
 
     // ── GET /expedicao/:id/updates ────────────────────────────────────────────
     .get("/:id/updates", async ({ params }) => {
@@ -312,7 +359,13 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             ORDER BY u.CreatedAt DESC
         `);
         return conv(rows);
-    }, { params: t.Object({ id: t.String() }) })
+    }, {
+        params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Listar atualizações da proposta",
+            description: "Retorna o histórico de atualizações/comentários (CRM_ExpedicaoUpdate) de uma proposta, com o nome do usuário responsável, ordenado do mais recente para o mais antigo.",
+        },
+    })
 
     // ── POST /expedicao/:id/update ────────────────────────────────────────────
     .post("/:id/update", async ({ params, body, set }) => {
@@ -336,6 +389,10 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
             UpdateContent: t.String(),
             idUsuario:     t.Optional(t.Number()),
         }),
+        detail: {
+            summary: "Adicionar atualização à proposta",
+            description: "Registra uma nova entrada de histórico (CRM_ExpedicaoUpdate) com o conteúdo informado e o usuário que a criou, associada à proposta.",
+        },
     })
 
     // ── PATCH /expedicao/:id/status ───────────────────────────────────────────
@@ -355,4 +412,8 @@ export const expedicaoRoutes = new Elysia({ detail: { tags: ["Expedicao"] }, pre
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ idStatus: t.Number() }),
+        detail: {
+            summary: "Atualizar status da proposta",
+            description: "Atualiza o campo idStatus da proposta (CRM_Proposta), usado para mover a proposta entre as etapas de expedição, como concluir ou reabrir.",
+        },
     });

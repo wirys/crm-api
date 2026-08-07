@@ -24,12 +24,22 @@ export const usersRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix: 
             console.error(e);
             return [];
         }
+    }, {
+        detail: {
+            summary: "Listar usuários",
+            description: "Retorna todos os usuários do CRM (CRM_Usuario) com o nome do grupo (join com CRM_Grupo) e a quantidade de contatos vinculados como representante (FreqPortifolio), ordenados com os ativos primeiro (flaAtivo desc).",
+        },
     })
     .get("/grupos", async () => {
         try {
             const grupos = await prisma.cRM_Grupo.findMany({ orderBy: { Grupo: "asc" } });
             return grupos;
         } catch { return []; }
+    }, {
+        detail: {
+            summary: "Listar grupos de usuário",
+            description: "Retorna todos os grupos de usuário cadastrados (CRM_Grupo), ordenados alfabeticamente pelo nome do grupo. Usado para popular seletores de grupo/permissão.",
+        },
     })
     .post("/", async ({ body, set }) => {
         try {
@@ -66,6 +76,10 @@ export const usersRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix: 
             Senha: t.Optional(t.String()),
             idGrupo: t.Optional(t.Number()),
         }),
+        detail: {
+            summary: "Criar usuário",
+            description: "Cria um novo usuário em CRM_Usuario com flaAtivo = true. Campos opcionais (Telefone, WS, Endereco, Titulo) são gravados como null quando não informados. Se idGrupo for informado, associa o usuário ao grupo. Se Senha for informada, é armazenada com hash SHA-256 codificado em base64.",
+        },
     })
     .put(
         "/:id",
@@ -99,6 +113,10 @@ export const usersRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix: 
                 Grupo: t.Optional(t.String()),
                 flaAtivo: t.Optional(t.Boolean()),
             }),
+            detail: {
+                summary: "Atualizar usuário",
+                description: "Atualiza parcialmente os dados do usuário identificado por :id em CRM_Usuario (apenas os campos informados no corpo são alterados). Se Grupo (nome do grupo) for informado, busca o idGrupo correspondente em CRM_Grupo e o associa ao usuário; se o grupo não existir, a alteração de grupo é ignorada silenciosamente.",
+            },
         }
     )
     .put(
@@ -119,6 +137,10 @@ export const usersRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix: 
             body: t.Object({
                 flaAtivo: t.Boolean(),
             }),
+            detail: {
+                summary: "Atualizar status ativo/inativo do usuário",
+                description: "Atualiza somente o campo flaAtivo do usuário identificado por :id em CRM_Usuario, permitindo ativar ou desativar seu acesso ao sistema.",
+            },
         }
     )
     .delete("/:id", async ({ params: { id }, set }) => {
@@ -150,4 +172,9 @@ export const usersRoutes = new Elysia({ detail: { tags: ["Usuarios"] }, prefix: 
             set.status = 500;
             return { message: "Erro ao excluir usuário" };
         }
+    }, {
+        detail: {
+            summary: "Excluir usuário",
+            description: "Exclui o usuário identificado por :id de CRM_Usuario, desde que não existam propostas (CRM_Proposta.idUsuario) nem contatos (CRM_Contato.idRepresentante) vinculados a ele; caso contrário retorna erro 400 impedindo a exclusão.",
+        },
     });

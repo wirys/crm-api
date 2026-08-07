@@ -99,7 +99,11 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             pendentes:      t.Optional(t.String()),
             userId:         t.Optional(t.String()),
             userGroup:      t.Optional(t.String()),
-        })
+        }),
+        detail: {
+            summary: "Listar propostas para checagem",
+            description: "Retorna a lista completa de propostas com dados de status, cliente, representante, valores e datas para a tela de checagem. Aceita filtros por status (lista de ids), representante(s), período de criação (dtaInicio/dtaFim), busca textual (número da proposta, nome/contato/CNPJ do cliente) e um filtro de pendentes (apenas propostas com PropostaNo preenchido). Vendedores (userGroup fora de 1,2,3,5,7) só visualizam propostas da própria carteira, salvo quando um filtro de representante é informado explicitamente.",
+        },
     })
 
     // ── GET /checagem/statuses ────────────────────────────────────────────────
@@ -108,6 +112,11 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             `SELECT idStatus, Status, CorHTML FROM CRM_Proposta_Status WITH (NOLOCK) ORDER BY idStatus`
         );
         return conv(rows);
+    }, {
+        detail: {
+            summary: "Listar status de proposta",
+            description: "Retorna todos os status possíveis de proposta (id, descrição e cor em HTML) cadastrados em CRM_Proposta_Status, ordenados por idStatus. Usado para popular selects e legendas na tela de checagem.",
+        },
     })
 
     // ── GET /checagem/filter-options ──────────────────────────────────────────
@@ -120,6 +129,11 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             statuses: conv(statuses).map((s: any) => ({ value: String(s.idStatus), label: s.Status, cor: s.CorHTML })),
             representantes: conv(reps).map((r: any) => ({ value: String(r.idUsuario), label: r.Nome })),
         };
+    }, {
+        detail: {
+            summary: "Listar opções de filtro da checagem",
+            description: "Retorna, em paralelo, a lista de status de proposta e a lista de usuários ativos (representantes) formatadas como opções (value/label) para alimentar os filtros de status e representante da tela de checagem.",
+        },
     })
 
     // ── PATCH /checagem/:id/status ────────────────────────────────────────────
@@ -139,6 +153,10 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ idStatus: t.Number() }),
+        detail: {
+            summary: "Atualizar status de uma proposta",
+            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Não valida o valor recebido contra a lista de status existentes; qualquer id numérico é aceito.",
+        },
     })
 
     // ── PATCH /checagem/:id/obs ───────────────────────────────────────────────
@@ -158,6 +176,10 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ ObsChecagem: t.String() }),
+        detail: {
+            summary: "Atualizar observação de checagem",
+            description: "Atualiza o campo ObsChecagem da proposta identificada por :id em CRM_Proposta. Não altera o status da proposta, apenas o texto de observação usado na etapa de checagem.",
+        },
     })
 
     // ── POST /checagem/:id/reprovar ───────────────────────────────────────────
@@ -183,6 +205,10 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ Observacao: t.Optional(t.String()) }),
+        detail: {
+            summary: "Reprovar proposta",
+            description: "Reprova a proposta identificada por :id: insere um registro histórico em CRM_Proposta_Reprovacao com a observação informada e a data atual, e em seguida atualiza a proposta em CRM_Proposta para idStatus = 6 (Reprovado), gravando a mesma observação em ObsChecagem.",
+        },
     })
 
     // ── POST /checagem/:id/aprovar ────────────────────────────────────────────
@@ -206,6 +232,10 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
     }, {
         params: t.Object({ id: t.String() }),
         body:   t.Object({ ObsChecagem: t.Optional(t.String()) }),
+        detail: {
+            summary: "Aprovar proposta",
+            description: "Aprova a proposta identificada por :id, atualizando idStatus para 3 (Aprovado) em CRM_Proposta. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status.",
+        },
     })
 
     // ── GET /checagem/:id/reprovacoes ─────────────────────────────────────────
@@ -224,4 +254,8 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         return conv(rows);
     }, {
         params: t.Object({ id: t.String() }),
+        detail: {
+            summary: "Listar histórico de reprovações de uma proposta",
+            description: "Retorna todos os registros de reprovação (observação e data, mais recente primeiro) da proposta identificada por :id, consultando a tabela CRM_Proposta_Reprovacao.",
+        },
     });

@@ -28,6 +28,11 @@ export const atividadeTipoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, 
             console.error("Erro ao buscar tipos de atividade:", error);
             return { status: 400, data: [], error };
         }
+    }, {
+        detail: {
+            summary: "Listar tipos de atividade",
+            description: "Retorna todos os tipos de atividade (CRM_AtividadeTipo) cadastrados, ordenados alfabeticamente, usados para classificar interações registradas em um contato."
+        }
     });
 
 // ── Atividade Status ─────────────────────────────────────────────────────────
@@ -45,6 +50,11 @@ export const atividadeStatusRoutes = new Elysia({ detail: { tags: ["Contatos"] }
         } catch (error) {
             console.error("Erro ao buscar status de atividade:", error);
             return { status: 400, data: [], error };
+        }
+    }, {
+        detail: {
+            summary: "Listar status de atividade por tipo",
+            description: "Retorna os status de atividade (CRM_AtividadeStatus) filtrados pelo idTipo informado na query, ordenados alfabeticamente. Usado para popular o campo de status conforme o tipo de atividade selecionado."
         }
     });
 
@@ -79,6 +89,11 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
         } catch (error) {
             console.error("Erro ao buscar interações:", error);
             return { status: 400, data: [], error };
+        }
+    }, {
+        detail: {
+            summary: "Listar interações de um contato",
+            description: "Retorna o histórico de interações (CRM_ContatoUpdate) de um contato específico (idContato via query), incluindo tipo, status, usuário responsável e próximo contato agendado, ordenado da mais recente para a mais antiga. Datas de próximo contato menores ou iguais a 1901-01-01 são tratadas como nulas."
         }
     })
 
@@ -117,6 +132,11 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
             set.status = 400;
             return { error: String(error) };
         }
+    }, {
+        detail: {
+            summary: "Criar interação em um contato",
+            description: "Registra uma nova interação (CRM_ContatoUpdate) para o contato informado, com tipo, status, conteúdo, valor opcional e próximo contato (prazo + horário). Busca o nome do contato e do usuário autenticado (via header x-user-id, default 1) para compor o registro. Retorna 404 se o contato não existir."
+        }
     })
 
     .delete("/:id", async ({ params, set }) => {
@@ -127,6 +147,11 @@ export const interacaoRoutes = new Elysia({ detail: { tags: ["Contatos"] }, pref
             console.error("Erro ao deletar interação:", error);
             set.status = 400;
             return { error };
+        }
+    }, {
+        detail: {
+            summary: "Excluir interação",
+            description: "Remove definitivamente uma interação (CRM_ContatoUpdate) pelo id informado na URL."
         }
     });
 
@@ -168,6 +193,11 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
         } catch (error) {
             console.error("Erro ao buscar arquivos:", error);
             return { status: 400, data: [], error };
+        }
+    }, {
+        detail: {
+            summary: "Listar arquivos de um contato",
+            description: "Retorna os arquivos anexados a um contato (CRM_ContatoArquivo) filtrados por idContato via query, ordenados do mais recente para o mais antigo. Para arquivos de imagem, gera uma URL assinada de visualização/miniatura via S3 (ignorando erro caso a chave não exista mais no bucket)."
         }
     })
 
@@ -212,6 +242,11 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             set.status = 400;
             return { error: String(error) };
         }
+    }, {
+        detail: {
+            summary: "Enviar arquivos para um contato",
+            description: "Faz upload de um ou mais arquivos (multipart/form-data) para o bucket S3 sob a chave contatos/{idContato}/{uuid}, e registra cada arquivo em CRM_ContatoArquivo com nome, tipo e usuário responsável (header x-user-id ou idUsuario do form, default 1). Requer idContato e files; retorna 400 se ausentes."
+        }
     })
 
     .post("/upload-image", async ({ body, set }) => {
@@ -236,6 +271,11 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             set.status = 400;
             return { error: String(error) };
         }
+    }, {
+        detail: {
+            summary: "Enviar imagem para interação",
+            description: "Faz upload de uma única imagem (multipart/form-data) para o bucket S3 sob a chave interacao-images/{uuid}, retornando a URL assinada de visualização e a chave gerada. Usado para inserir imagens dentro do conteúdo de uma interação. Retorna 400 se o arquivo não for informado."
+        }
     })
 
     .get("/download/:id", async ({ params, set }) => {
@@ -254,6 +294,11 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             console.error("Erro ao gerar download:", error);
             set.status = 400;
             return { error: String(error) };
+        }
+    }, {
+        detail: {
+            summary: "Gerar link de download de arquivo",
+            description: "Busca o arquivo (CRM_ContatoArquivo) pelo id na URL e retorna uma URL assinada de download do S3. Retorna 404 caso o arquivo não seja encontrado."
         }
     })
 
@@ -275,5 +320,10 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             console.error("Erro ao deletar arquivo:", error);
             set.status = 400;
             return { error };
+        }
+    }, {
+        detail: {
+            summary: "Excluir arquivo",
+            description: "Remove um arquivo pelo id: exclui o objeto correspondente do bucket S3 (ignorando erro se já não existir) e em seguida remove o registro em CRM_ContatoArquivo."
         }
     });
