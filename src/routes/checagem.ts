@@ -142,10 +142,17 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         const id = Number(params.id);
         const { idStatus } = body;
         try {
+            const current: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
+            );
+            if (current[0]?.idStatus >= 3) {
+                set.status = 403;
+                return { error: "Proposta já validada e não pode mais ter a etiqueta alterada" };
+            }
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET idStatus = ${Number(idStatus)} WHERE idProposta = ${id}`
             );
-            // idStatus 3 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
+            // idStatus 3 = "Validado" — envia os itens da proposta para a Produção
             if (Number(idStatus) === 3) {
                 await enviarPropostaParaProducao(id);
             }
@@ -160,7 +167,7 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         body:   t.Object({ idStatus: t.Number() }),
         detail: {
             summary: "Atualizar status de uma proposta",
-            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Não valida o valor recebido contra a lista de status existentes; qualquer id numérico é aceito. Quando o novo idStatus é 3 (Aprovado), os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
+            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Bloqueado (403) se a proposta já estiver com idStatus >= 3 (Validado ou posterior). Quando o novo idStatus é 3 (Validado), os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
         },
     })
 
@@ -192,6 +199,13 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         const id = Number(params.id);
         const obs = String(body.Observacao ?? "").replace(/'/g, "''");
         try {
+            const current: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
+            );
+            if (current[0]?.idStatus >= 3) {
+                set.status = 403;
+                return { error: "Proposta já validada e não pode mais ser reprovada" };
+            }
             // 1) Insert reprovacao record
             await prisma.$queryRawUnsafe(`
                 INSERT INTO CRM_Proposta_Reprovacao (idProposta, dtaReprovacao, Observacao)
@@ -221,7 +235,14 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         const id = Number(params.id);
         const obs = String(body.ObsChecagem ?? "").replace(/'/g, "''");
         try {
-            // Status 3 = Aprovado (from proposals.ts statusMap)
+            const current: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
+            );
+            if (current[0]?.idStatus >= 3) {
+                set.status = 403;
+                return { error: "Proposta já validada" };
+            }
+            // Status 3 = Validado (from CRM_Proposta_Status)
             const sets = obs
                 ? `idStatus = 3, ObsChecagem = '${obs}'`
                 : `idStatus = 3`;

@@ -164,14 +164,24 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             description: "Executa a stored procedure sp_CRMResumoStatus, que retorna um resumo consolidado das propostas agrupadas por status."
         }
     })
-    .put("/status/:id", async ({ params, body }) => {
+    .put("/status/:id", async ({ params, body, set }) => {
         const id = parseInt(params.id);
+
+        const current = await prisma.cRM_Proposta.findUnique({
+            where: { idProposta: id },
+            select: { idStatus: true }
+        });
+        if (current && current.idStatus !== null && current.idStatus >= 3) {
+            set.status = 403;
+            return { error: "Proposta já validada e não pode mais ter a etiqueta alterada" };
+        }
+
         await prisma.cRM_Proposta.update({
             where: { idProposta: id },
             data: { idStatus: body.idStatus }
         });
 
-        // idStatus 3 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
+        // idStatus 3 = "Validado" — envia os itens da proposta para a Produção
         if (body.idStatus === 3) {
             await enviarPropostaParaProducao(id);
         }
@@ -181,7 +191,7 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
         body: t.Object({ idStatus: t.Number() }),
         detail: {
             summary: "Atualizar status da proposta",
-            description: "Atualiza o idStatus de uma proposta (CRM_Proposta) pelo id na URL. Regra de negócio: quando o novo idStatus é 3 (\"Aprovado pelo cliente\"), os itens da proposta (CRM_Proposta_Detalhe) são automaticamente inseridos em CRM_PedidosAbertos_ItemExtra para envio à Produção, evitando duplicidade ao checar itens já existentes."
+            description: "Atualiza o idStatus de uma proposta (CRM_Proposta) pelo id na URL. Bloqueado (403) se a proposta já estiver com idStatus >= 3 (Validado ou posterior). Regra de negócio: quando o novo idStatus é 3 (\"Validado\"), os itens da proposta (CRM_Proposta_Detalhe) são automaticamente inseridos em CRM_PedidosAbertos_ItemExtra para envio à Produção, evitando duplicidade ao checar itens já existentes."
         }
     })
     .put("/obs/:id", async ({ params, body }) => {

@@ -20,14 +20,18 @@ function convertBigIntToNumber(obj: any): any {
 const CHECAGEM_GROUPS = new Set([1, 2, 3, 4, 5, 7]);
 
 async function checkProposalLocked(id: number, request: Request): Promise<string | null> {
-    const userGroup = Number(request.headers.get("x-user-group") || 0);
-    if (CHECAGEM_GROUPS.has(userGroup)) return null;
-
     const rows: any[] = await prisma.$queryRawUnsafe(
         `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
     );
     if (!rows.length) return "Proposta não encontrada";
     const status = Number(rows[0].idStatus);
+
+    // A partir de "Validado" (idStatus 3) a proposta é somente leitura para todos, sem exceção.
+    if (status >= 3) return "Proposta já validada e não pode mais ser editada.";
+
+    const userGroup = Number(request.headers.get("x-user-group") || 0);
+    if (CHECAGEM_GROUPS.has(userGroup)) return null;
+
     if (status >= 2) return "Proposta em checagem. Apenas usuários com permissão de checagem podem editar.";
     return null;
 }
