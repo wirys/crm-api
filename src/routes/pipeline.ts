@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
+import { enviarPropostaParaProducao } from "../lib/producao";
 
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -172,32 +173,7 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
 
         // idStatus 3 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
         if (body.idStatus === 3) {
-            await prisma.$executeRawUnsafe(`
-                INSERT INTO CRM_PedidosAbertos_ItemExtra
-                    (idPropostaDetalhe, PropostaNo, dtaEnvio, nomComercial, NCM, CodMaterial, nomMaterial, codMaterialMatriz, Unidade, PesoEmbalagem, TTKG, TTCJ, Nome)
-                SELECT
-                    d.idPropostaDetalhe,
-                    p.PropostaNo,
-                    GETDATE(),
-                    ISNULL(NULLIF(c.nomComercial, ''), c.nomContato),
-                    m.NCM,
-                    m.CodMaterial,
-                    ISNULL(NULLIF(d.MaterialDescricao, ''), m.nomMaterial),
-                    m.codMaterialMatriz,
-                    m.Unidade,
-                    CAST(ISNULL(m.PesoEmbalagem, 0) AS VARCHAR(50)),
-                    CAST(ISNULL(m.PesoEmbalagem, 0) * ISNULL(d.Quantidade, 0) AS VARCHAR(50)),
-                    CAST(ISNULL(d.Quantidade, 0) AS VARCHAR(50))
-                FROM CRM_Proposta_Detalhe d
-                INNER JOIN CRM_Proposta p ON p.idProposta = d.idProposta
-                LEFT JOIN CRM_Contato c ON c.idContato = p.idContato
-                LEFT JOIN CRM_Produto_Material m ON m.idMaterial = d.idMaterial
-                WHERE d.idProposta = ${id}
-                    AND NOT EXISTS (
-                        SELECT 1 FROM CRM_PedidosAbertos_ItemExtra e
-                        WHERE e.idPropostaDetalhe = d.idPropostaDetalhe
-                    )
-            `);
+            await enviarPropostaParaProducao(id);
         }
 
         return { success: true };

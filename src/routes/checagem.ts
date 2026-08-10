@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
+import { enviarPropostaParaProducao } from "../lib/producao";
 
 function conv(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -144,6 +145,10 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET idStatus = ${Number(idStatus)} WHERE idProposta = ${id}`
             );
+            // idStatus 3 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
+            if (Number(idStatus) === 3) {
+                await enviarPropostaParaProducao(id);
+            }
             return { success: true };
         } catch (e) {
             console.error(e);
@@ -155,7 +160,7 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         body:   t.Object({ idStatus: t.Number() }),
         detail: {
             summary: "Atualizar status de uma proposta",
-            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Não valida o valor recebido contra a lista de status existentes; qualquer id numérico é aceito.",
+            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Não valida o valor recebido contra a lista de status existentes; qualquer id numérico é aceito. Quando o novo idStatus é 3 (Aprovado), os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
         },
     })
 
@@ -223,6 +228,8 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET ${sets} WHERE idProposta = ${id}`
             );
+            // Envia os itens da proposta para a tela de Produção
+            await enviarPropostaParaProducao(id);
             return { success: true };
         } catch (e) {
             console.error(e);
@@ -234,7 +241,7 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         body:   t.Object({ ObsChecagem: t.Optional(t.String()) }),
         detail: {
             summary: "Aprovar proposta",
-            description: "Aprova a proposta identificada por :id, atualizando idStatus para 3 (Aprovado) em CRM_Proposta. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status.",
+            description: "Aprova a proposta identificada por :id, atualizando idStatus para 3 (Aprovado) em CRM_Proposta. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status. Os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
         },
     })
 
