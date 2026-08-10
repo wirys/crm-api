@@ -26,8 +26,9 @@ async function checkProposalLocked(id: number, request: Request): Promise<string
     if (!rows.length) return "Proposta não encontrada";
     const status = Number(rows[0].idStatus);
 
-    // Apenas propostas "Aprovadas" (idStatus 3) são somente leitura para todos, sem exceção.
-    if (status === 3) return "Proposta já aprovada e não pode mais ser editada.";
+    // idStatus 3 = "Validado" (etapa interna de checagem, ainda editável).
+    // Apenas propostas "Aprovado pelo cliente" (idStatus 5) são somente leitura para todos, sem exceção.
+    if (status === 5) return "Proposta já aprovada pelo cliente e não pode mais ser editada.";
 
     const userGroup = Number(request.headers.get("x-user-group") || 0);
     if (CHECAGEM_GROUPS.has(userGroup)) return null;
