@@ -145,9 +145,9 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             const current: any[] = await prisma.$queryRawUnsafe(
                 `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
             );
-            if (current[0]?.idStatus === 3) {
+            if (current[0]?.idStatus === 5) {
                 set.status = 403;
-                return { error: "Proposta já aprovada e não pode mais ter a etiqueta alterada" };
+                return { error: "Proposta já aprovada pelo cliente e não pode mais ter a etiqueta alterada" };
             }
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET idStatus = ${Number(idStatus)} WHERE idProposta = ${id}`
@@ -167,7 +167,7 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         body:   t.Object({ idStatus: t.Number() }),
         detail: {
             summary: "Atualizar status de uma proposta",
-            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Bloqueado (403) se a proposta já estiver com idStatus = 3 (Aprovada). Quando o novo idStatus é 3 (Aprovada), os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
+            description: "Atualiza diretamente o campo idStatus da proposta identificada por :id em CRM_Proposta. Bloqueado (403) se a proposta já estiver com idStatus = 5 (Aprovada pelo cliente). Quando o novo idStatus é 3 (Validado), os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
         },
     })
 
@@ -202,9 +202,9 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             const current: any[] = await prisma.$queryRawUnsafe(
                 `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
             );
-            if (current[0]?.idStatus === 3) {
+            if (current[0]?.idStatus === 5) {
                 set.status = 403;
-                return { error: "Proposta já aprovada e não pode mais ser reprovada" };
+                return { error: "Proposta já aprovada pelo cliente e não pode mais ser reprovada" };
             }
             // 1) Insert reprovacao record
             await prisma.$queryRawUnsafe(`
@@ -238,9 +238,9 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             const current: any[] = await prisma.$queryRawUnsafe(
                 `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
             );
-            if (current[0]?.idStatus === 3) {
+            if (current[0]?.idStatus === 5) {
                 set.status = 403;
-                return { error: "Proposta já aprovada" };
+                return { error: "Proposta já aprovada pelo cliente" };
             }
             // Status 3 = Validado (from CRM_Proposta_Status)
             const sets = obs
@@ -261,8 +261,43 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         params: t.Object({ id: t.String() }),
         body:   t.Object({ ObsChecagem: t.Optional(t.String()) }),
         detail: {
-            summary: "Aprovar proposta",
-            description: "Aprova a proposta identificada por :id, atualizando idStatus para 3 (Aprovado) em CRM_Proposta. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status. Os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
+            summary: "Validar proposta (checagem)",
+            description: "Valida a proposta identificada por :id, atualizando idStatus para 3 (Validado) em CRM_Proposta. A proposta continua editável nesse status e fica liberada para o vendedor negociar com o cliente. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status. Os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
+        },
+    })
+
+    // ── POST /checagem/:id/aprovar-cliente ────────────────────────────────────
+    .post("/:id/aprovar-cliente", async ({ params, query, set }) => {
+        const id = Number(params.id);
+        const ugid = Number((query as Record<string, string | undefined>).userGroup || 0);
+        const isAdmin = [1, 2, 3, 5, 7].includes(ugid);
+        if (!isAdmin) {
+            set.status = 403;
+            return { error: "Apenas coordenadores podem marcar a proposta como aprovada pelo cliente" };
+        }
+        try {
+            const current: any[] = await prisma.$queryRawUnsafe(
+                `SELECT idStatus FROM CRM_Proposta WHERE idProposta = ${id}`
+            );
+            if (current[0]?.idStatus !== 3) {
+                set.status = 403;
+                return { error: "A proposta precisa estar Validada antes de ser marcada como aprovada pelo cliente" };
+            }
+            await prisma.$queryRawUnsafe(
+                `UPDATE CRM_Proposta SET idStatus = 5 WHERE idProposta = ${id}`
+            );
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao aprovar proposta pelo cliente" };
+        }
+    }, {
+        params: t.Object({ id: t.String() }),
+        query:  t.Object({ userGroup: t.Optional(t.String()) }),
+        detail: {
+            summary: "Marcar proposta como aprovada pelo cliente",
+            description: "Move a proposta identificada por :id de Validado (idStatus 3) para Aprovado pelo cliente (idStatus 5), estado final e somente leitura. Restrito aos grupos de coordenação/admin (1,2,3,5,7). Bloqueado (403) se a proposta não estiver Validada.",
         },
     })
 
