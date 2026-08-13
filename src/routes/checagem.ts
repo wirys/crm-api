@@ -153,8 +153,8 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET idStatus = ${Number(idStatus)} WHERE idProposta = ${id}`
             );
-            // idStatus 3 = "Validado" — envia os itens da proposta para a Produção
-            if (Number(idStatus) === 3) {
+            // idStatus 5 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
+            if (Number(idStatus) === 5) {
                 await enviarPropostaParaProducao(id);
             }
             return { success: true };
@@ -250,8 +250,6 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET ${sets} WHERE idProposta = ${id}`
             );
-            // Envia os itens da proposta para a tela de Produção
-            await enviarPropostaParaProducao(id);
             return { success: true };
         } catch (e) {
             console.error(e);
@@ -263,7 +261,7 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
         body:   t.Object({ ObsChecagem: t.Optional(t.String()) }),
         detail: {
             summary: "Validar proposta (checagem)",
-            description: "Valida a proposta identificada por :id, atualizando idStatus para 3 (Validado) em CRM_Proposta. A proposta continua editável nesse status e fica liberada para o vendedor negociar com o cliente. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status. Os itens da proposta são enviados para a tela de Produção (CRM_PedidosAbertos_ItemExtra).",
+            description: "Valida a proposta identificada por :id, atualizando idStatus para 3 (Validado) em CRM_Proposta. A proposta continua editável nesse status e fica liberada para o vendedor negociar com o cliente. Se uma observação (ObsChecagem) for informada, ela também é gravada junto com a mudança de status. Os itens só são enviados para a tela de Produção quando a proposta for marcada como aprovada pelo cliente (idStatus 5).",
         },
     })
 
@@ -287,6 +285,9 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET idStatus = 5 WHERE idProposta = ${id}`
             );
+
+            // Só agora, com aprovação do cliente, os itens vão para a Produção
+            await enviarPropostaParaProducao(id);
 
             const info: any[] = await prisma.$queryRawUnsafe(`
                 SELECT TOP 1
