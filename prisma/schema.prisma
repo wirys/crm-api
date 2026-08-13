@@ -582,6 +582,21 @@ model CRM_Parametro {
   flaAtivo    Boolean?
 }
 
+model CRM_EmailConfig {
+  id              Int       @id(map: "PK_CRM_EmailConfig") @default(autoincrement())
+  Provider        String?   @db.VarChar(20)
+  ResendApiKey    String?   @db.VarChar(200)
+  SmtpHost        String?   @db.VarChar(200)
+  SmtpPort        Int?
+  SmtpUser        String?   @db.VarChar(200)
+  SmtpPassword    String?   @db.VarChar(200)
+  SmtpSecure      Boolean?
+  FromEmail       String?   @db.VarChar(200)
+  FromName        String?   @db.VarChar(200)
+  flaAtivo        Boolean?
+  dtaAlteracao    DateTime? @db.DateTime
+}
+
 model CRM_PedidosAbertos_ItemExtra {
   id                 Int       @id(map: "PK_CRM_PedidosAbertos_ItemExtra") @default(autoincrement())
   idPropostaDetalhe  Int?
