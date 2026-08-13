@@ -181,8 +181,8 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
             data: { idStatus: body.idStatus }
         });
 
-        // idStatus 3 = "Validado" — envia os itens da proposta para a Produção
-        if (body.idStatus === 3) {
+        // idStatus 5 = "Aprovado pelo cliente" — envia os itens da proposta para a Produção
+        if (body.idStatus === 5) {
             await enviarPropostaParaProducao(id);
         }
 
@@ -191,7 +191,7 @@ export const pipelineRoutes = new Elysia({ detail: { tags: ["Pipeline"] }, prefi
         body: t.Object({ idStatus: t.Number() }),
         detail: {
             summary: "Atualizar status da proposta",
-            description: "Atualiza o idStatus de uma proposta (CRM_Proposta) pelo id na URL. Bloqueado (403) se a proposta já estiver com idStatus >= 3 (Validado ou posterior). Regra de negócio: quando o novo idStatus é 3 (\"Validado\"), os itens da proposta (CRM_Proposta_Detalhe) são automaticamente inseridos em CRM_PedidosAbertos_ItemExtra para envio à Produção, evitando duplicidade ao checar itens já existentes."
+            description: "Atualiza o idStatus de uma proposta (CRM_Proposta) pelo id na URL. Bloqueado (403) se a proposta já estiver com idStatus >= 3 (Validado ou posterior). Regra de negócio: quando o novo idStatus é 5 (\"Aprovado pelo cliente\"), os itens da proposta (CRM_Proposta_Detalhe) são automaticamente inseridos em CRM_PedidosAbertos_ItemExtra para envio à Produção, evitando duplicidade ao checar itens já existentes."
         }
     })
     .put("/obs/:id", async ({ params, body }) => {
