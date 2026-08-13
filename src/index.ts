@@ -29,6 +29,7 @@ import { estoqueImportRoutes } from "./routes/estoque-import";
 import { comprasRoutes, fornecedorRoutes } from "./routes/compras";
 import { ocorrenciasRoutes } from "./routes/ocorrencias";
 import { adminRoutes } from "./routes/admin";
+import { emailConfigRoutes } from "./routes/email-config";
 import { feriadosRoutes } from "./routes/feriados";
 import { followupRoutes } from "./routes/followup";
 import { perfisRoutes } from "./routes/perfis";
@@ -77,6 +78,7 @@ export const app = new Elysia()
     .use(fornecedorRoutes)
     .use(ocorrenciasRoutes)
     .use(adminRoutes)
+    .use(emailConfigRoutes)
     .use(feriadosRoutes)
     .use(followupRoutes)
     .use(perfisRoutes)

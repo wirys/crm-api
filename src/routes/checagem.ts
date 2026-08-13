@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
 import { enviarPropostaParaProducao } from "../lib/producao";
+import { sendEmail } from "../lib/email";
 
 function conv(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -286,6 +287,30 @@ export const checagemRoutes = new Elysia({ detail: { tags: ["Propostas"] }, pref
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_Proposta SET idStatus = 5 WHERE idProposta = ${id}`
             );
+
+            const info: any[] = await prisma.$queryRawUnsafe(`
+                SELECT TOP 1
+                    p.PropostaNo,
+                    ClienteNome   = ISNULL(c.nomContato, ''),
+                    VendedorNome  = ISNULL(v.Nome, ''),
+                    VendedorEmail = ISNULL(v.Email, '')
+                FROM CRM_Proposta AS p WITH (NOLOCK)
+                LEFT JOIN CRM_Contato AS c WITH (NOLOCK) ON p.idContato = c.idContato
+                LEFT JOIN CRM_Usuario AS v WITH (NOLOCK) ON c.idRepresentante = v.idUsuario
+                WHERE p.idProposta = ${id}
+            `);
+            const proposta = info[0];
+            if (proposta?.VendedorEmail) {
+                await sendEmail({
+                    to: proposta.VendedorEmail,
+                    subject: `Proposta ${proposta.PropostaNo} aprovada pelo cliente`,
+                    html: `
+                        <p>Olá, ${proposta.VendedorNome || ""}.</p>
+                        <p>A proposta <strong>${proposta.PropostaNo}</strong>, do cliente <strong>${proposta.ClienteNome}</strong>, foi aprovada pelo cliente.</p>
+                    `,
+                });
+            }
+
             return { success: true };
         } catch (e) {
             console.error(e);
