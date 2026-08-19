@@ -1,5 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
+import { enqueueJob } from "../lib/job-queue";
+import { getCircuitState } from "../lib/circuit-breaker";
+import { JOB_TABELA_PRECO_PUBLICAR, JOB_TABELA_PRECO_IMPORTAR } from "../jobs/registry";
 
 function conv(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -82,32 +85,20 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         const id = Number(params.id);
         const { dados } = body as { dados: { linha: number; coluna: number; valor: string }[] };
 
+        if (!dados || dados.length === 0) {
+            set.status = 400;
+            return { error: "Nenhum dado recebido para importação." };
+        }
+
         try {
-            // Legado faz TRUNCATE antes de importar (não usa idTabelaPreco)
-            await prisma.$queryRawUnsafe(`TRUNCATE TABLE tbTabelaPrecoImport`);
-
-            const BATCH_SIZE = 500;
-            for (let i = 0; i < dados.length; i += BATCH_SIZE) {
-                const batch = dados.slice(i, i + BATCH_SIZE);
-                const values = batch
-                    .map(d => `SELECT ${d.linha}, ${d.coluna}, '${(d.valor || '').replace(/'/g, "''")}'`)
-                    .join(" UNION ALL ");
-                await prisma.$queryRawUnsafe(`
-                    INSERT INTO tbTabelaPrecoImport (Linha, Coluna, Valor)
-                    ${values}
-                `);
-            }
-
-            await prisma.tbTabelaPreco.update({
-                where: { id },
-                data: { Status: "Importado" },
-            });
-
-            return { success: true, totalLinhas: dados.length };
+            await prisma.tbTabelaPreco.update({ where: { id }, data: { Status: "Importação Enfileirada" } });
+            const jobId = await enqueueJob(JOB_TABELA_PRECO_IMPORTAR, id, { dados });
+            set.status = 202;
+            return { success: true, jobId, message: "Importação enfileirada para processamento em background." };
         } catch (e: any) {
             console.error(e);
             set.status = 500;
-            return { error: e.message };
+            return { error: "Falha ao enfileirar a importação da tabela de preço.", details: e.message };
         }
     }, {
         params: t.Object({ id: t.String() }),
@@ -119,34 +110,54 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
             })),
         }),
         detail: {
-            summary: "Importar dados de uma tabela de preço",
-            description: "Trunca a tabela tbTabelaPrecoImport e insere os dados recebidos (linha, coluna, valor) em lotes de até 500 registros via INSERT com UNION ALL. Ao final, atualiza o status da tabela de preço :id em tbTabelaPreco para 'Importado'. Note que o truncate afeta todas as tabelas de preço, não apenas a informada em :id.",
+            summary: "Importar dados de uma tabela de preço (assíncrono)",
+            description: "Enfileira um job em background que remove (escopado por idTabelaPreco) e reinsere os dados recebidos (linha, coluna, valor) em tbTabelaPrecoImport, em lotes de até 500 registros, dentro de uma transaction com timeout estendido. Retorna 202 com o jobId imediatamente; use GET /tabela-preco/job/:jobId para acompanhar o status. Ao concluir, atualiza o status da tabela de preço :id para 'Importado'. Qualquer falha desfaz automaticamente as alterações (rollback) e marca o status como 'Erro na Importação', sem afetar dados de outras tabelas de preço. Protegido por circuit breaker.",
         },
     })
 
     .post("/:id/publicar", async ({ params, set }) => {
         const id = Number(params.id);
 
+        const tabela = await prisma.tbTabelaPreco.findUnique({ where: { id } });
+        if (!tabela) {
+            set.status = 404;
+            return { error: "Tabela de preço não encontrada." };
+        }
+
         try {
-            // Usa a mesma stored procedure do legado
-            await prisma.$queryRawUnsafe(`EXEC sp_CRMTabelaPrecoPublicar`);
-
-            await prisma.tbTabelaPreco.update({
-                where: { id },
-                data: { Status: "Tabela Publicada" },
-            });
-
-            return { success: true };
+            await prisma.tbTabelaPreco.update({ where: { id }, data: { Status: "Publicação Enfileirada" } });
+            const jobId = await enqueueJob(JOB_TABELA_PRECO_PUBLICAR, id);
+            set.status = 202;
+            return { success: true, jobId, message: "Publicação enfileirada para processamento em background." };
         } catch (e: any) {
             console.error(e);
             set.status = 500;
-            return { error: e.message };
+            return { error: "Falha ao enfileirar a publicação da tabela de preço.", details: e.message };
         }
     }, {
         params: t.Object({ id: t.String() }),
         detail: {
-            summary: "Publicar tabela de preço",
-            description: "Executa a stored procedure sp_CRMTabelaPrecoPublicar (mesma rotina do sistema legado) para publicar os dados importados, e atualiza o status da tabela de preço :id em tbTabelaPreco para 'Tabela Publicada'.",
+            summary: "Publicar tabela de preço (assíncrono)",
+            description: "Enfileira um job em background que reprocessa os dados importados (escopados por :id) e faz upsert por chave natural em CRM_Produto_Material/CRM_Produto_Composicao, preservando idMaterial/idComposicao já referenciados em propostas. Retorna 202 com o jobId imediatamente; use GET /tabela-preco/job/:jobId para acompanhar o status. Protegido por circuit breaker: após falhas consecutivas, novas tentativas são pausadas automaticamente por um período antes de tentar de novo.",
+        },
+    })
+
+    .get("/job/:jobId", async ({ params, set }) => {
+        const jobId = Number(params.jobId);
+        const job = await prisma.tbJob.findUnique({ where: { id: jobId } });
+        if (!job) {
+            set.status = 404;
+            return { error: "Job não encontrado." };
+        }
+        return conv({
+            ...job,
+            circuito: getCircuitState(job.tipo),
+        });
+    }, {
+        params: t.Object({ jobId: t.String() }),
+        detail: {
+            summary: "Consultar status de um job",
+            description: "Retorna o status atual de um job em background (PENDENTE, PROCESSANDO, CONCLUIDO, ERRO), número de tentativas, erro (se houver) e o estado do circuit breaker associado ao tipo do job (CLOSED/OPEN/HALF_OPEN).",
         },
     })
 
