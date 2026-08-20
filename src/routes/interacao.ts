@@ -249,7 +249,7 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
         }
     })
 
-    .post("/upload-image", async ({ body, set }) => {
+    .post("/upload-image", async ({ body, set, request }) => {
         try {
             const formData = body as any;
             const file = formData.file;
@@ -258,13 +258,16 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
             const originalName = file.name || "image.png";
             const contentType = file.type || "image/png";
             const ext = originalName.includes(".") ? "." + originalName.split(".").pop() : ".png";
-            const s3Key = `interacao-images/${crypto.randomUUID()}${ext}`;
+            const filename = `${crypto.randomUUID()}${ext}`;
+            const s3Key = `interacao-images/${filename}`;
 
             const arrayBuffer = await file.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             await uploadToS3(s3Key, buffer, contentType);
 
-            const url = await getSignedViewUrl(s3Key, contentType);
+            // Não gravamos a URL assinada (expira em 1h) dentro do conteúdo da interação.
+            // Em vez disso, salvamos um link estável que sempre resolve para uma URL assinada nova.
+            const url = `${new URL(request.url).origin}/arquivos/view-image/${filename}`;
             return { url, key: s3Key };
         } catch (error) {
             console.error("Erro ao fazer upload de imagem:", error);
@@ -274,7 +277,30 @@ export const arquivosRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
     }, {
         detail: {
             summary: "Enviar imagem para interação",
-            description: "Faz upload de uma única imagem (multipart/form-data) para o bucket S3 sob a chave interacao-images/{uuid}, retornando a URL assinada de visualização e a chave gerada. Usado para inserir imagens dentro do conteúdo de uma interação. Retorna 400 se o arquivo não for informado."
+            description: "Faz upload de uma única imagem (multipart/form-data) para o bucket S3 sob a chave interacao-images/{uuid}, retornando um link estável (/arquivos/view-image/{uuid}) que resolve para uma URL assinada nova a cada acesso, e a chave gerada. Usado para inserir imagens dentro do conteúdo de uma interação. Retorna 400 se o arquivo não for informado."
+        }
+    })
+
+    .get("/view-image/:filename", async ({ params, set }) => {
+        try {
+            const s3Key = `interacao-images/${params.filename}`;
+            const contentType = params.filename.match(/\.(jpe?g)$/i) ? "image/jpeg"
+                : params.filename.match(/\.png$/i) ? "image/png"
+                : params.filename.match(/\.gif$/i) ? "image/gif"
+                : params.filename.match(/\.webp$/i) ? "image/webp"
+                : "application/octet-stream";
+            const url = await getSignedViewUrl(s3Key, contentType);
+            set.redirect = url;
+            set.status = 302;
+        } catch (error) {
+            console.error("Erro ao gerar visualização de imagem:", error);
+            set.status = 404;
+            return { error: "Imagem não encontrada" };
+        }
+    }, {
+        detail: {
+            summary: "Visualizar imagem de interação",
+            description: "Redireciona (302) para uma URL assinada do S3 recém-gerada para a imagem interacao-images/{filename}. Permite que imagens embutidas no conteúdo de interações (que salvam este link estável) continuem visíveis indefinidamente, já que a URL assinada real é gerada a cada acesso em vez de ser congelada no HTML salvo."
         }
     })
 
