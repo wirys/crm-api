@@ -206,6 +206,23 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         },
     })
 
+    .delete("/erros/:jobId", async ({ params, set }) => {
+        const jobId = Number(params.jobId);
+        try {
+            await prisma.tbJob.delete({ where: { id: jobId } });
+            return { success: true };
+        } catch (e: any) {
+            set.status = 404;
+            return { error: "Job não encontrado." };
+        }
+    }, {
+        params: t.Object({ jobId: t.String() }),
+        detail: {
+            summary: "Descartar notificação de erro de tabela de preço",
+            description: "Remove permanentemente o registro do job (tbJob) usado para exibir a notificação de erro no sino, sem afetar a tabela de preço em si.",
+        },
+    })
+
     .get("/job/:jobId", async ({ params, set }) => {
         const jobId = Number(params.jobId);
         const job = await prisma.tbJob.findUnique({ where: { id: jobId } });
