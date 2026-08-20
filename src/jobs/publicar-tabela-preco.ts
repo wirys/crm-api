@@ -129,11 +129,22 @@ export async function parseStagingTabelaPreco(idTabelaPreco: number) {
     }
 
     // Replica o cursor original (percorre de trás para frente marcando itens de composição).
+    //
+    // `rows` só contém linhas que tiveram pelo menos uma célula não vazia na planilha:
+    // uma linha totalmente em branco (separador visual entre um produto mono-componente
+    // e uma composição abaixo dele) não gera nenhuma célula no XLSX.utils.sheet_to_json
+    // do frontend (apps/crm/src/pages/tabela-preco/index.tsx), então nunca chega na
+    // staging table e "desaparece" deste array — os números de linha ficam com um buraco.
+    // Sem checar esse buraco, o cursor atravessava a linha em branco como se os produtos
+    // estivessem colados na composição, agrupando mono-componentes de outro grupo como
+    // se fossem itens da composição.
     let emComposicao = false;
     let idComposicaoImportacao = 0;
+    let linhaAnterior: number | null = null;
     for (let i = rows.length - 1; i >= 0; i--) {
         const r = rows[i];
-        if (emComposicao && r.tag === "") {
+        const houveLinhaEmBranco = linhaAnterior !== null && linhaAnterior - r.linha > 1;
+        if (emComposicao && !houveLinhaEmBranco && r.tag === "") {
             r.tag = "Item Composicao";
             r.idComposicaoImportacao = idComposicaoImportacao;
         } else {
@@ -144,6 +155,7 @@ export async function parseStagingTabelaPreco(idTabelaPreco: number) {
             idComposicaoImportacao += 1;
             r.idComposicaoImportacao = idComposicaoImportacao;
         }
+        linhaAnterior = r.linha;
     }
 
     // Composições "reais" (linhas COMPOSICAO cujo nome contém CJ ou PRECO — mesmo filtro da procedure).
