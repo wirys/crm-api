@@ -250,11 +250,13 @@ export async function publicarTabelaPreco(
         materialPorCodigo.set(m.CodMaterial, melhor(atual, m));
     }
 
-    // Processamento em lotes com uma transaction curta por lote, em vez de uma única
-    // transaction de até 5 minutos prendendo uma conexão do pool inteira. Cada lote é
-    // idempotente (upsert por chave natural), então um retry do job (maxTentativas em
-    // registry.ts) simplesmente reprocessa do início sem duplicar nada — os lotes já
-    // publicados só recebem um update repetido.
+    // Processamento em lotes, sem $transaction interativa: o driver adapter mssql do
+    // Prisma (ainda em preview) tem um bug conhecido — "Transaction has not begun" —
+    // quando várias transactions interativas curtas rodam em sequência sob concorrência
+    // no pool de conexões. Cada upsert é idempotente por chave natural, então a
+    // atomicidade por lote não é essencial: um retry do job (maxTentativas em registry.ts)
+    // simplesmente reprocessa do início sem duplicar nada — os já publicados só recebem
+    // um update repetido.
     const LOTE_SIZE = 50;
     const totalPassos = composicoesParaPublicar.length + materiais.length;
     let passosFeitos = 0;
@@ -263,32 +265,30 @@ export async function publicarTabelaPreco(
     const mapaIdComposicaoImportacaoParaIdComposicao = new Map<number, number>();
     const lotesComposicao = emLotes(composicoesParaPublicar, LOTE_SIZE);
     for (const lote of lotesComposicao) {
-        await prisma.$transaction(async (tx) => {
-            for (const c of lote) {
-                const existente = composicaoPorNome.get(c.nomComposicao) ?? null;
-                if (existente) {
-                    await tx.cRM_Produto_Composicao.update({
-                        where: { idComposicao: existente.idComposicao },
-                        data: { PesoEmbalagem: c.PesoEmbalagem },
-                    });
-                    resultado.composicoesAtualizadas++;
-                    if (c.idComposicaoImportacao != null) {
-                        mapaIdComposicaoImportacaoParaIdComposicao.set(c.idComposicaoImportacao, existente.idComposicao);
-                    }
-                } else {
-                    const criada = await tx.cRM_Produto_Composicao.create({
-                        data: { nomComposicao: c.nomComposicao, PesoEmbalagem: c.PesoEmbalagem },
-                    });
-                    resultado.composicoesCriadas++;
-                    if (c.idComposicaoImportacao != null) {
-                        mapaIdComposicaoImportacaoParaIdComposicao.set(c.idComposicaoImportacao, criada.idComposicao);
-                    }
-                    // Composição nova recém-criada nesse mesmo publicarTabelaPreco: registra
-                    // pra que outros lotes já enxerguem no map em memória.
-                    composicaoPorNome.set(c.nomComposicao, criada);
+        for (const c of lote) {
+            const existente = composicaoPorNome.get(c.nomComposicao) ?? null;
+            if (existente) {
+                await prisma.cRM_Produto_Composicao.update({
+                    where: { idComposicao: existente.idComposicao },
+                    data: { PesoEmbalagem: c.PesoEmbalagem },
+                });
+                resultado.composicoesAtualizadas++;
+                if (c.idComposicaoImportacao != null) {
+                    mapaIdComposicaoImportacaoParaIdComposicao.set(c.idComposicaoImportacao, existente.idComposicao);
                 }
+            } else {
+                const criada = await prisma.cRM_Produto_Composicao.create({
+                    data: { nomComposicao: c.nomComposicao, PesoEmbalagem: c.PesoEmbalagem },
+                });
+                resultado.composicoesCriadas++;
+                if (c.idComposicaoImportacao != null) {
+                    mapaIdComposicaoImportacaoParaIdComposicao.set(c.idComposicaoImportacao, criada.idComposicao);
+                }
+                // Composição nova recém-criada nesse mesmo publicarTabelaPreco: registra
+                // pra que outros lotes já enxerguem no map em memória.
+                composicaoPorNome.set(c.nomComposicao, criada);
             }
-        }, { timeout: 30_000, maxWait: 10_000 });
+        }
         passosFeitos += lote.length;
         await onProgress?.("Publicando composições", passosFeitos, totalPassos);
     }
@@ -297,44 +297,42 @@ export async function publicarTabelaPreco(
     const materiaisPublicados: { idMaterial: number; idComposicaoImportacao: number | null }[] = [];
     const lotesMaterial = emLotes(materiais, LOTE_SIZE);
     for (const lote of lotesMaterial) {
-        await prisma.$transaction(async (tx) => {
-            for (const r of lote) {
-                const codMaterial = col(r, 4);
-                const data = {
-                    idMaterialGrupo: 43,
-                    nomMaterial: col(r, 2),
-                    codMaterialMatriz: codMaterial || null,
-                    nomMaterialMatriz: col(r, 2),
-                    NCM: col(r, 3) || null,
-                    CodMaterial: codMaterial || null,
-                    PesoEmbalagem: toNumberSimple(col(r, 14)),
-                    Unidade: col(r, 9) || null,
-                    ST: col(r, 11) || null,
-                    flaComposicao: r.tag === "Item Composicao",
-                    IPI: toNumberSimple(col(r, 10)),
-                    PrecoKg18: toNumberSimple(col(r, 18)),
-                    PrecoKg12: toNumberSimple(col(r, 17)),
-                    PrecoKg07: toNumberSimple(col(r, 16)),
-                    Embalagem: col(r, 7) || null,
-                    Consumo: col(r, 6) || null,
-                    dtaAtualizacao: new Date(),
-                    flaAtivo: true,
-                };
+        for (const r of lote) {
+            const codMaterial = col(r, 4);
+            const data = {
+                idMaterialGrupo: 43,
+                nomMaterial: col(r, 2),
+                codMaterialMatriz: codMaterial || null,
+                nomMaterialMatriz: col(r, 2),
+                NCM: col(r, 3) || null,
+                CodMaterial: codMaterial || null,
+                PesoEmbalagem: toNumberSimple(col(r, 14)),
+                Unidade: col(r, 9) || null,
+                ST: col(r, 11) || null,
+                flaComposicao: r.tag === "Item Composicao",
+                IPI: toNumberSimple(col(r, 10)),
+                PrecoKg18: toNumberSimple(col(r, 18)),
+                PrecoKg12: toNumberSimple(col(r, 17)),
+                PrecoKg07: toNumberSimple(col(r, 16)),
+                Embalagem: col(r, 7) || null,
+                Consumo: col(r, 6) || null,
+                dtaAtualizacao: new Date(),
+                flaAtivo: true,
+            };
 
-                const existente = codMaterial ? materialPorCodigo.get(codMaterial) ?? null : null;
+            const existente = codMaterial ? materialPorCodigo.get(codMaterial) ?? null : null;
 
-                if (existente) {
-                    await tx.cRM_Produto_Material.update({ where: { idMaterial: existente.idMaterial }, data });
-                    resultado.materiaisAtualizados++;
-                    materiaisPublicados.push({ idMaterial: existente.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao });
-                } else {
-                    const criado = await tx.cRM_Produto_Material.create({ data });
-                    resultado.materiaisCriados++;
-                    materiaisPublicados.push({ idMaterial: criado.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao });
-                    if (codMaterial) materialPorCodigo.set(codMaterial, criado);
-                }
+            if (existente) {
+                await prisma.cRM_Produto_Material.update({ where: { idMaterial: existente.idMaterial }, data });
+                resultado.materiaisAtualizados++;
+                materiaisPublicados.push({ idMaterial: existente.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao });
+            } else {
+                const criado = await prisma.cRM_Produto_Material.create({ data });
+                resultado.materiaisCriados++;
+                materiaisPublicados.push({ idMaterial: criado.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao });
+                if (codMaterial) materialPorCodigo.set(codMaterial, criado);
             }
-        }, { timeout: 30_000, maxWait: 10_000 });
+        }
         passosFeitos += lote.length;
         await onProgress?.("Publicando materiais", passosFeitos, totalPassos);
     }
@@ -343,11 +341,9 @@ export async function publicarTabelaPreco(
     //    (não mexe em vínculos de composições que não fazem parte desta tabela de preço).
     const idsComposicaoTocadas = Array.from(mapaIdComposicaoImportacaoParaIdComposicao.values());
     if (idsComposicaoTocadas.length > 0) {
-        await prisma.$transaction(async (tx) => {
-            await tx.cRM_Produto_ComposicaoMaterial.deleteMany({
-                where: { idComposicao: { in: idsComposicaoTocadas } },
-            });
-        }, { timeout: 30_000, maxWait: 10_000 });
+        await prisma.cRM_Produto_ComposicaoMaterial.deleteMany({
+            where: { idComposicao: { in: idsComposicaoTocadas } },
+        });
 
         const vinculos = materiaisPublicados
             .filter(m => m.idComposicaoImportacao != null && mapaIdComposicaoImportacaoParaIdComposicao.has(m.idComposicaoImportacao))
