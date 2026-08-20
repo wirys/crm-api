@@ -2301,28 +2301,6 @@ model tbTabelaPrecoImport {
   Linha         Int?
   Coluna        Int?
   Valor         String? @db.VarChar(500)
-
-  @@index([idTabelaPreco], map: "IX_tbTabelaPrecoImport_idTabelaPreco")
-}
-
-/// Fila de jobs em background (ex: publicacao de tabela de preco), processada por worker via poll.
-model tbJob {
-  id                  Int       @id(map: "PK_tbJob") @default(autoincrement())
-  tipo                String    @db.VarChar(50)
-  idReferencia        Int?
-  status              String    @db.VarChar(20) @default("PENDENTE")
-  tentativas          Int       @default(0)
-  maxTentativas       Int       @default(3)
-  payload             String?   @db.NVarChar(Max)
-  resultado           String?   @db.NVarChar(Max)
-  erro                String?   @db.NVarChar(Max)
-  dtaCriacao          DateTime  @default(now())
-  dtaInicio           DateTime?
-  dtaFim              DateTime?
-  dtaProximaTentativa DateTime?
-
-  @@index([status, dtaProximaTentativa], map: "IX_tbJob_status_proxima")
-  @@index([tipo, idReferencia], map: "IX_tbJob_tipo_referencia")
 }
 
 model temp {

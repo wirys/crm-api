@@ -36,9 +36,6 @@ import { perfisRoutes } from "./routes/perfis";
 import { fiscalRoutes } from "./routes/fiscal";
 import { publicProposalsRoutes } from "./routes/public-proposals";
 import { actionLogger } from "./lib/action-logger";
-import { registerJobs } from "./jobs/registry";
-
-registerJobs();
 
 const {URL, PORT} = Bun.env;
 
@@ -146,7 +143,7 @@ export const app = new Elysia()
             ],
         }
     }))
-  .listen(Number(PORT) || 3000);
+  .listen(3000);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
