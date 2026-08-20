@@ -152,6 +152,9 @@ model CRM_Contato {
   @@index([IdStatus], map: "NonClusteredIndex-20240130-135610")
   @@index([IdOrigem], map: "NonClusteredIndex-20240130-135626")
   @@index([idRepresentante], map: "NonClusteredIndex-20240130-135638")
+  @@index([IdOrigem], map: "IDX_CRM_Contato_idOrigem")
+  @@index([idRepresentante], map: "IDX_CRM_Contato_idRepresentante")
+  @@index([IdStatus], map: "IDX_CRM_Contato_idStatus")
 }
 
 model CRM_Contato_Endereco {
@@ -266,6 +269,7 @@ model CRM_ContatoRepresentanteAdicional {
   @@index([idContato], map: "IX_CRM_ContatoRepresentanteAdicional_idContato")
   @@index([idContato], map: "NonClusteredIndex-20240529-102050")
   @@index([idRepresentante], map: "NonClusteredIndex-20240529-102112")
+  @@index([idContato], map: "IDX_CRM_ContatoRepresentanteAdicional_idContato")
 }
 
 model CRM_ContatoUpdate {
@@ -475,18 +479,13 @@ model CRM_Grupo {
   Menu07  Int?
   Menu08  Int?
   Painel  Int?
+  Permissoes String? @db.NVarChar(Max)
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model CRM_Importacao_TabelaPreco {
   CodProduto String? @db.VarChar(50)
 
-  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
-  // 7 Decimal? @map("7") @db.Decimal(18, 6)
-  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
-  // 12 Decimal? @map("12") @db.Decimal(18, 6)
-  /// This field was commented out because of an invalid name. Please provide a valid one that matches [a-zA-Z][a-zA-Z0-9_]*
-  // 18 Decimal? @map("18") @db.Decimal(18, 6)
   @@ignore
 }
 
@@ -572,6 +571,7 @@ model CRM_Origem {
   corHTML  String? @db.VarChar(50)
 
   @@index([idOrigem], map: "IX_CRM_Origem_idOrigem_cover")
+  @@index([idOrigem], map: "IDX_CRM_Origem_idOrigem")
 }
 
 model CRM_Parametro {
@@ -583,18 +583,18 @@ model CRM_Parametro {
 }
 
 model CRM_EmailConfig {
-  id              Int       @id(map: "PK_CRM_EmailConfig") @default(autoincrement())
-  Provider        String?   @db.VarChar(20)
-  ResendApiKey    String?   @db.VarChar(200)
-  SmtpHost        String?   @db.VarChar(200)
-  SmtpPort        Int?
-  SmtpUser        String?   @db.VarChar(200)
-  SmtpPassword    String?   @db.VarChar(200)
-  SmtpSecure      Boolean?
-  FromEmail       String?   @db.VarChar(200)
-  FromName        String?   @db.VarChar(200)
-  flaAtivo        Boolean?
-  dtaAlteracao    DateTime? @db.DateTime
+  id           Int       @id(map: "PK_CRM_EmailConfig") @default(autoincrement())
+  Provider     String?   @db.VarChar(20)
+  ResendApiKey String?   @db.VarChar(200)
+  SmtpHost     String?   @db.VarChar(200)
+  SmtpPort     Int?
+  SmtpUser     String?   @db.VarChar(200)
+  SmtpPassword String?   @db.VarChar(200)
+  SmtpSecure   Boolean?
+  FromEmail    String?   @db.VarChar(200)
+  FromName     String?   @db.VarChar(200)
+  flaAtivo     Boolean?
+  dtaAlteracao DateTime? @db.DateTime
 }
 
 model CRM_PedidosAbertos_ItemExtra {
@@ -691,8 +691,9 @@ model CRM_Produto_ComposicaoMaterial_Teste {
   @@ignore
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model CRM_Produto_Material {
-  idMaterial             Int       @id(map: "PK_CRM_Produto_Material") @default(autoincrement())
+  idMaterial             Int       @id(map: "PK_CRM_Produto_Material_client") @default(autoincrement())
   idMaterialGrupo        Int?
   nomMaterial            String?   @db.VarChar(500)
   codMaterialMatriz      String?   @db.VarChar(50)
@@ -706,9 +707,9 @@ model CRM_Produto_Material {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -732,9 +733,9 @@ model CRM_Produto_Material_BKP20250301121116 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -760,9 +761,9 @@ model CRM_Produto_Material_BKP20250301122502 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -788,9 +789,9 @@ model CRM_Produto_Material_BKP20250302043159 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -816,9 +817,9 @@ model CRM_Produto_Material_BKP20250302043301 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -844,9 +845,9 @@ model CRM_Produto_Material_BKP20250302043440 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -872,9 +873,9 @@ model CRM_Produto_Material_BKP20250302051226 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -900,9 +901,9 @@ model CRM_Produto_Material_BKP20250309034812 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -928,9 +929,9 @@ model CRM_Produto_Material_BKP20250310061738 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -956,9 +957,9 @@ model CRM_Produto_Material_BKP20250316195422 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -984,9 +985,9 @@ model CRM_Produto_Material_BKP20250317193510 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1012,9 +1013,9 @@ model CRM_Produto_Material_BKP20250417140741 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1040,9 +1041,9 @@ model CRM_Produto_Material_BKP20250419052927 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1068,9 +1069,9 @@ model CRM_Produto_Material_BKP20250420144422 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1096,9 +1097,9 @@ model CRM_Produto_Material_BKP20250420145019 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1124,9 +1125,9 @@ model CRM_Produto_Material_BKP20250420145553 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1152,9 +1153,9 @@ model CRM_Produto_Material_BKP20250421034907 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1180,9 +1181,9 @@ model CRM_Produto_Material_BKP20250421183210 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1208,9 +1209,9 @@ model CRM_Produto_Material_BKP20250505142135 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1236,9 +1237,9 @@ model CRM_Produto_Material_BKP20250505191228 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1264,9 +1265,9 @@ model CRM_Produto_Material_BKP20250505193050 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1292,9 +1293,9 @@ model CRM_Produto_Material_BKP20250506024520 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1320,9 +1321,9 @@ model CRM_Produto_Material_BKP20250506094820 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1348,9 +1349,9 @@ model CRM_Produto_Material_BKP20250525084130 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1376,9 +1377,9 @@ model CRM_Produto_Material_BKP20250527055307 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1404,9 +1405,9 @@ model CRM_Produto_Material_BKP20250601182513 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1432,9 +1433,9 @@ model CRM_Produto_Material_BKP20250608190221 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1460,9 +1461,9 @@ model CRM_Produto_Material_BKP20250905192254 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1488,9 +1489,9 @@ model CRM_Produto_Material_BKP20251012182147 {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1516,9 +1517,9 @@ model CRM_Produto_Material_Teste {
   ST                     String?   @db.VarChar(50)
   flaComposicao          Boolean?
   IPI                    Float?
-  PrecoKg18              Decimal?  @db.Decimal(18, 2)
-  PrecoKg12              Decimal?  @db.Decimal(18, 2)
-  PrecoKg07              Decimal?  @db.Decimal(18, 2)
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
   Embalagem              String?   @db.VarChar(500)
   Consumo                String?   @db.VarChar(500)
   dtaAtualizacao         DateTime? @db.DateTime
@@ -1564,8 +1565,7 @@ model CRM_Proposta {
   ValorM2             Decimal?  @db.Decimal(18, 2)
 
   @@index([idContato], map: "IX_CRM_Proposta_idContato")
-  @@index([idContato], map: "NonClusteredIndex-20241217-113506")
-  @@index([idUsuario], map: "NonClusteredIndex-20241217-113519")
+  @@index([idUsuario], map: "IX_Proposta_idUsuario_cov")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1930,6 +1930,7 @@ model CRM_Status {
   CorHTML  String? @db.VarChar(50)
 
   @@index([idStatus], map: "IX_CRM_Status_idStatus_cover")
+  @@index([idStatus], map: "IDX_CRM_Status_idStatus")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1970,6 +1971,7 @@ model CRM_Usuario {
   corHTML           String?   @db.VarChar(50)
 
   @@index([idUsuario], map: "IX_CRM_Usuario_idUsuario_cover")
+  @@index([idUsuario], map: "IDX_CRM_Usuario_idUsuario")
 }
 
 model CRM_UsuarioAtivacao {
@@ -2301,6 +2303,8 @@ model tbTabelaPrecoImport {
   Linha         Int?
   Coluna        Int?
   Valor         String? @db.VarChar(500)
+
+  @@index([idTabelaPreco], map: "IX_tbTabelaPrecoImport_idTabelaPreco")
 }
 
 model temp {
@@ -2312,4 +2316,918 @@ model temp {
   NCM             String? @db.VarChar(50)
   CodMaterial     String? @db.VarChar(50)
   Peso            String? @db.VarChar(50)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Materia_ERRADO {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+model CRM_Produto_Material_ {
+  idMaterial             Int       @id(map: "PK_CRM_Produto_Material") @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material__ {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20251120173416 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20251120173441 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260212022805 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260212055944 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401072907 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401073246 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401073255 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401074729 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401075341 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401080055 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401080309 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260401112946 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260407055952 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260423173010 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260513212300 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260527120958 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260616105649 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260617130134 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818103757 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818103938 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818104007 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818123818 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818124938 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818125726 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818125752 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818130104 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818130133 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_BKP20260818130236 {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CRM_Produto_Material_ERR {
+  idMaterial             Int       @default(autoincrement())
+  idMaterialGrupo        Int?
+  nomMaterial            String?   @db.VarChar(500)
+  codMaterialMatriz      String?   @db.VarChar(50)
+  nomMaterialMatriz      String?   @db.VarChar(500)
+  NCM                    String?   @db.VarChar(50)
+  CodMaterial            String?   @db.VarChar(50)
+  PesoEmbalagem          Float?
+  PrecoKg                Float?
+  Unidade                String?   @db.VarChar(100)
+  ValorEmbalagem         Float?
+  ST                     String?   @db.VarChar(50)
+  flaComposicao          Boolean?
+  IPI                    Float?
+  PrecoKg18              Decimal?  @db.Decimal(18, 4)
+  PrecoKg12              Decimal?  @db.Decimal(18, 4)
+  PrecoKg07              Decimal?  @db.Decimal(18, 4)
+  Embalagem              String?   @db.VarChar(500)
+  Consumo                String?   @db.VarChar(500)
+  dtaAtualizacao         DateTime? @db.DateTime
+  flaAtivo               Boolean?
+  idComposicaoImportacao Int?
+
+  @@index([idMaterial, flaComposicao], map: "IX_Material_Composicao_cov")
+  @@ignore
+}
+
+model tbJob {
+  id                  Int       @id(map: "PK_tbJob") @default(autoincrement())
+  tipo                String    @db.VarChar(50)
+  idReferencia        Int?
+  status              String    @default("PENDENTE", map: "DF_tbJob_status") @db.VarChar(20)
+  tentativas          Int       @default(0, map: "DF_tbJob_tentativas")
+  maxTentativas       Int       @default(3, map: "DF_tbJob_maxTentativas")
+  payload             String?   @db.NVarChar(Max)
+  resultado           String?   @db.NVarChar(Max)
+  erro                String?   @db.NVarChar(Max)
+  progresso           String?   @db.NVarChar(200)
+  dtaCriacao          DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_tbJob_dtaCriacao")
+  dtaInicio           DateTime?
+  dtaFim              DateTime?
+  dtaProximaTentativa DateTime?
+
+  @@index([status, dtaProximaTentativa], map: "IX_tbJob_status_proxima")
+  @@index([tipo, idReferencia], map: "IX_tbJob_tipo_referencia")
 }
