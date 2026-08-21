@@ -306,7 +306,7 @@ export async function publicarTabelaPreco(
     }
 
     // 2) Upsert de materiais por chave natural (CodMaterial) — preserva idMaterial.
-    const materiaisPublicados: { idMaterial: number; idComposicaoImportacao: number | null }[] = [];
+    const materiaisPublicados: { idMaterial: number; idComposicaoImportacao: number | null; PesoEmbalagem: number | null; nomMaterial: string | null }[] = [];
     const lotesMaterial = emLotes(materiais, LOTE_SIZE);
     for (const lote of lotesMaterial) {
         for (const r of lote) {
@@ -337,11 +337,11 @@ export async function publicarTabelaPreco(
             if (existente) {
                 await prisma.cRM_Produto_Material.update({ where: { idMaterial: existente.idMaterial }, data });
                 resultado.materiaisAtualizados++;
-                materiaisPublicados.push({ idMaterial: existente.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao });
+                materiaisPublicados.push({ idMaterial: existente.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao, PesoEmbalagem: data.PesoEmbalagem, nomMaterial: data.nomMaterial });
             } else {
                 const criado = await prisma.cRM_Produto_Material.create({ data });
                 resultado.materiaisCriados++;
-                materiaisPublicados.push({ idMaterial: criado.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao });
+                materiaisPublicados.push({ idMaterial: criado.idMaterial, idComposicaoImportacao: r.idComposicaoImportacao, PesoEmbalagem: data.PesoEmbalagem, nomMaterial: data.nomMaterial });
                 if (codMaterial) materialPorCodigo.set(codMaterial, criado);
             }
         }
@@ -362,6 +362,8 @@ export async function publicarTabelaPreco(
             .map(m => ({
                 idComposicao: mapaIdComposicaoImportacaoParaIdComposicao.get(m.idComposicaoImportacao!)!,
                 idMaterial: m.idMaterial,
+                PesoEmbalagem: m.PesoEmbalagem,
+                nomMaterial: m.nomMaterial,
             }));
 
         for (const lote of emLotes(vinculos, 200)) {

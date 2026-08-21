@@ -203,7 +203,7 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                 const contactId = parseInt(params.id);
                 const { contact, address } = body;
 
-                const { flaAtivo, idBotConversa, dtaAbertura, dtaNascimento, dtaCadastro, idRepresentante, IdOrigem, ...rest } = contact;
+                const { flaAtivo, idBotConversa, dtaAbertura, idRepresentante, IdOrigem, ...rest } = contact;
                 await prisma.cRM_Contato.update({
                     where: { idContato: contactId },
                     data: {
@@ -268,6 +268,14 @@ export const contactsRoutes = new Elysia({ detail: { tags: ["Contatos"] }, prefi
                     Porte: t.Optional(t.String()),
                     NaturezaJuridica: t.Optional(t.String()),
                     AtividadePrincipal: t.Optional(t.String()),
+                    CodCliente: t.Optional(t.String()),
+                    Tipo: t.Optional(t.String()),
+                    ContatoEmpresa: t.Optional(t.String()),
+                    Segmento: t.Optional(t.String()),
+                    CategoriaFinanceira: t.Optional(t.String()),
+                    fContato: t.Optional(t.String()),
+                    fTelefone: t.Optional(t.String()),
+                    fEmail: t.Optional(t.String()),
                 }),
                 address: t.Object({
                     CEP: t.Optional(t.String()),
