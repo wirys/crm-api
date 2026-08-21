@@ -57,6 +57,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 t1.ValorM2,
                 t1.FundoPobreza,
                 t1.CalculaDifal,
+                t1.ExcluiIPI,
                 t1.idFrete,
                 t1.idCondicaoPagamento,
                 t1.idOutros,
@@ -92,6 +93,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
                 t1.PropostaNo,
                 t1.ObsChecagem,
                 t1.ValorM2,
+                t1.ExcluiIPI,
                 ClienteNome = CASE WHEN t3.nomComercial IS NOT NULL AND t3.nomComercial <> '' THEN t3.nomComercial ELSE t3.nomContato END,
                 CNPJ = ISNULL(t3.CNPJ, ''),
                 Contato = ISNULL(t3.nomContato, ''),
@@ -127,6 +129,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             representante: r.Representante || "",
             representanteEmail: r.RepresentanteEmail || "",
             representanteTelefone: r.RepresentanteTelefone || "",
+            excluiIPI: Number(r.ExcluiIPI || 0) === 1,
         };
     }, {
         detail: {
@@ -441,7 +444,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const {
             idDifal, CalculaDifal, Desconto, idFrete, idCondicaoPagamento, Observacao, ObsChecagem,
             Possibilidade, GanhoEstimado, DataPossivel, dtaValidade, Area, ValorM2, FundoPobreza,
-            idOutros, ValorOutros, Valor
+            idOutros, ValorOutros, Valor, ExcluiIPI
         } = body as any;
 
         const sets: string[] = [];
@@ -463,6 +466,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         if (Area !== undefined) sets.push(`Area = ${num(Area)}`);
         if (ValorM2 !== undefined) sets.push(`ValorM2 = ${num(ValorM2)}`);
         if (FundoPobreza !== undefined) sets.push(`FundoPobreza = ${num(FundoPobreza)}`);
+        if (ExcluiIPI !== undefined) sets.push(`ExcluiIPI = ${num(ExcluiIPI)}`);
         if (idOutros !== undefined) sets.push(`idOutros = ${num(idOutros)}`);
         if (ValorOutros !== undefined) sets.push(`ValorOutros = ${num(ValorOutros)}`);
         if (Valor !== undefined) sets.push(`Valor = ${num(Valor)}`);
@@ -474,7 +478,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
     }, {
         detail: {
             summary: "Atualizar dados gerais da proposta",
-            description: "Atualiza campos da proposta (Difal, desconto, frete, condição de pagamento, observações, possibilidade, ganho estimado, datas, área, valor por m², fundo de pobreza, outros e valor). Bloqueia a edição se a proposta estiver em checagem (idStatus >= 2) e o usuário não pertencer aos grupos com permissão de checagem.",
+            description: "Atualiza campos da proposta (Difal, desconto, frete, condição de pagamento, observações, possibilidade, ganho estimado, datas, área, valor por m², fundo de pobreza, exclusão de IPI, outros e valor). Bloqueia a edição se a proposta estiver em checagem (idStatus >= 2) e o usuário não pertencer aos grupos com permissão de checagem.",
         },
     })
     .put("/:id/generate-code", async ({ params, body, request, set }) => {
