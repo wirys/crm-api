@@ -1563,6 +1563,7 @@ model CRM_Proposta {
   DataPossivel        DateTime? @db.DateTime
   Area                Int?
   ValorM2             Decimal?  @db.Decimal(18, 2)
+  ExcluiIPI           Int?
 
   @@index([idContato], map: "IX_CRM_Proposta_idContato")
   @@index([idUsuario], map: "IX_Proposta_idUsuario_cov")
