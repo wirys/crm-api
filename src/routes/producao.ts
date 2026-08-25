@@ -15,6 +15,9 @@ function conv(obj: any): any {
     return obj;
 }
 
+// Grupos com alçada para concluir itens fora das regras (ELT-13): Admin, Diretoria, Coordenação.
+const SUPERVISOR_GROUPS = new Set([1, 2, 3]);
+
 const ALLOWED_STATUS_FIELDS = [
     "idProducaoStatus",
     "idSeparacaoStatus",
@@ -295,8 +298,43 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
     })
 
     // ── PATCH /producao/:id/concluir ──────────────────────────────────────────
-    .patch("/:id/concluir", async ({ params, set }) => {
+    // Regra (ELT-13): só conclui se Financeiro = APROVADO e Estoque = EM ESTOQUE/SIM.
+    // Grupos 1 (Admin), 2 (Diretoria) e 3 (Coordenação) têm alçada para concluir
+    // mesmo sem essas condições. A regra vale só para o item — nunca bloqueia a
+    // proposta em si (edição, checagem, expedição etc. continuam livres).
+    .patch("/:id/concluir", async ({ params, request, set }) => {
         const id = Number(params.id);
+        const userGroup = Number(request.headers.get("x-user-group") || 0);
+        const hasAlcada = SUPERVISOR_GROUPS.has(userGroup);
+
+        if (!hasAlcada) {
+            const check: any[] = await prisma.$queryRawUnsafe(`
+                SELECT
+                    FinanceiroStatus = ISNULL(sf.Status, ''),
+                    EstoqueStatus    = ISNULL(se.Status, '')
+                FROM CRM_PedidosAbertos_ItemExtra e WITH (NOLOCK)
+                LEFT JOIN CRM_StatusGeral sf WITH (NOLOCK) ON e.idFinanceiroStatus = sf.id
+                LEFT JOIN CRM_StatusGeral se WITH (NOLOCK) ON e.idEstoqueStatus = se.id
+                WHERE e.id = ${id}
+            `);
+            const row = check[0];
+            if (!row) { set.status = 404; return { error: "Item não encontrado" }; }
+
+            const pendencias: string[] = [];
+            if (row.FinanceiroStatus !== "APROVADO") {
+                pendencias.push(`Financeiro (${row.FinanceiroStatus || "sem status"})`);
+            }
+            if (!["EM ESTOQUE", "SIM"].includes(row.EstoqueStatus)) {
+                pendencias.push(`Estoque (${row.EstoqueStatus || "sem status"})`);
+            }
+            if (pendencias.length) {
+                set.status = 403;
+                return {
+                    error: `Não é possível concluir: ${pendencias.join(" e ")} pendente. Apenas Admin, Diretoria ou Coordenação podem concluir fora dessas condições.`,
+                };
+            }
+        }
+
         try {
             await prisma.$queryRawUnsafe(
                 `UPDATE CRM_PedidosAbertos_ItemExtra SET dtaFinalEfetiva = GETDATE() WHERE id = ${id}`
@@ -311,6 +349,6 @@ export const producaoRoutes = new Elysia({ detail: { tags: ["Producao"] }, prefi
         params: t.Object({ id: t.String() }),
         detail: {
             summary: "Concluir item de produção",
-            description: "Marca o item :id de CRM_PedidosAbertos_ItemExtra como concluído, gravando a data/hora atual (GETDATE) no campo dtaFinalEfetiva. Esse campo é o que determina se o item aparece na listagem de itens em andamento ou de concluídos.",
+            description: "Marca o item :id de CRM_PedidosAbertos_ItemExtra como concluído, gravando a data/hora atual (GETDATE) no campo dtaFinalEfetiva. Bloqueia com 403 se o Financeiro não estiver APROVADO ou o Estoque não estiver EM ESTOQUE/SIM, exceto para usuários dos grupos 1 (Admin), 2 (Diretoria) ou 3 (Coordenação), que têm alçada para concluir mesmo assim. A regra é por item — nunca bloqueia a proposta.",
         },
     });

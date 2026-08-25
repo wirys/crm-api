@@ -677,9 +677,11 @@ model CRM_Produto_Composicao_Teste {
 }
 
 model CRM_Produto_ComposicaoMaterial {
-  id           Int  @id(map: "PK_CRM_Produto_ComposicaoMaterial") @default(autoincrement())
-  idComposicao Int?
-  idMaterial   Int?
+  id            Int     @id(map: "PK_CRM_Produto_ComposicaoMaterial") @default(autoincrement())
+  idComposicao  Int?
+  idMaterial    Int?
+  nomMaterial   String? @db.VarChar(500)
+  PesoEmbalagem Float?
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -3231,4 +3233,16 @@ model tbJob {
 
   @@index([status, dtaProximaTentativa], map: "IX_tbJob_status_proxima")
   @@index([tipo, idReferencia], map: "IX_tbJob_tipo_referencia")
+}
+
+model CRM_Changelog {
+  id            Int       @id(map: "PK_CRM_Changelog") @default(autoincrement())
+  dtaPublicacao DateTime  @db.Date
+  Titulo        String    @db.VarChar(500)
+  Secoes        String    @db.NVarChar(Max)
+  idUsuario     Int?
+  dtaCriacao    DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_CRM_Changelog_dtaCriacao")
+  dtaAlteracao  DateTime?
+
+  @@index([dtaPublicacao], map: "IX_CRM_Changelog_dtaPublicacao")
 }

@@ -16,15 +16,75 @@ function conv(obj: any): any {
     return obj;
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseIntList(raw: string | undefined): number[] | null {
+    if (!raw) return null;
+    const ids = raw.split(",").map(v => Number(v.trim())).filter(v => Number.isInteger(v) && v > 0);
+    return ids.length ? ids : null;
+}
+
+function parseDate(raw: string | undefined): string | null {
+    if (!raw || !DATE_RE.test(raw)) return null;
+    return raw;
+}
+
+interface DashboardFilters {
+    dataInicio: string | null;
+    dataFim: string | null;
+    idStatus: number[] | null;
+    representantes: number[] | null;
+}
+
+function readFilters(request: Request, query: Record<string, string | undefined>): DashboardFilters {
+    const { userId, isAdmin } = getUserContext(request);
+    const queryReps = parseIntList(query.idRepresentante);
+    // Não-admin sempre restrito ao próprio representante; admin pode filtrar por lista, senão vê tudo.
+    const representantes = !isAdmin && userId > 0 ? [userId] : queryReps;
+    return {
+        dataInicio: parseDate(query.dataInicio),
+        dataFim: parseDate(query.dataFim),
+        idStatus: parseIntList(query.idStatus),
+        representantes,
+    };
+}
+
+function propostaJoinContato(filters: DashboardFilters): string {
+    return filters.representantes
+        ? `JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato AND c.idRepresentante IN (${filters.representantes.join(",")})`
+        : "";
+}
+
+function propostaWhere(filters: DashboardFilters, alias = "p"): string {
+    const conds: string[] = [];
+    if (filters.dataInicio) conds.push(`${alias}.dtaCriacao >= '${filters.dataInicio}'`);
+    if (filters.dataFim) conds.push(`${alias}.dtaCriacao < DATEADD(DAY, 1, '${filters.dataFim}')`);
+    if (filters.idStatus) conds.push(`${alias}.idStatus IN (${filters.idStatus.join(",")})`);
+    return conds.length ? `AND ${conds.join(" AND ")}` : "";
+}
+
+function contatoJoinRep(filters: DashboardFilters, alias: string): string {
+    return filters.representantes
+        ? `JOIN CRM_Contato c WITH (NOLOCK) ON ${alias}.idContato = c.idContato AND c.idRepresentante IN (${filters.representantes.join(",")})`
+        : "";
+}
+
+const filterQuerySchema = {
+    dataInicio: t.Optional(t.String()),
+    dataFim: t.Optional(t.String()),
+    idStatus: t.Optional(t.String()),
+    idRepresentante: t.Optional(t.String()),
+};
+
 export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }, prefix: "/dashboard-stats" })
 
     // ── GET /dashboard-stats/overview ─────────────────────────────────────────
-    .get("/overview", async ({ request }) => {
-        const { userId, isAdmin } = getUserContext(request);
-        const repFilter = !isAdmin && userId > 0;
-        const repJoinProposta = repFilter ? `JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato AND c.idRepresentante = ${userId}` : "";
-        const repWhereContato = repFilter ? `AND t1.idRepresentante = ${userId}` : "";
-        const repJoinAtividade = repFilter ? `JOIN CRM_Contato c WITH (NOLOCK) ON cu.idContato = c.idContato AND c.idRepresentante = ${userId}` : "";
+    .get("/overview", async ({ request, query }) => {
+        const filters = readFilters(request, query as Record<string, string | undefined>);
+        const repJoinProposta = propostaJoinContato(filters);
+        const propWhere = propostaWhere(filters, "p");
+        const repWhereContato = filters.representantes ? `AND t1.idRepresentante IN (${filters.representantes.join(",")})` : "";
+        const repJoinAtividade = contatoJoinRep(filters, "cu");
 
         const [
             totalPropostasRows,
@@ -33,7 +93,7 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             atividadesHojeRows,
             atividadesVencidasRows,
         ] = await Promise.all([
-            prisma.$queryRawUnsafe(`SELECT Total = COUNT(*) FROM CRM_Proposta p WITH (NOLOCK) ${repJoinProposta}`),
+            prisma.$queryRawUnsafe(`SELECT Total = COUNT(*) FROM CRM_Proposta p WITH (NOLOCK) ${repJoinProposta} WHERE 1=1 ${propWhere}`),
             prisma.$queryRawUnsafe(`
                 SELECT Total = COUNT(*)
                 FROM CRM_Contato t1 WITH (NOLOCK)
@@ -53,6 +113,7 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
                 FROM CRM_Proposta p WITH (NOLOCK)
                 LEFT JOIN CRM_Proposta_Status s WITH (NOLOCK) ON p.idStatus = s.idStatus
                 ${repJoinProposta}
+                WHERE 1=1 ${propWhere}
                 GROUP BY p.idStatus, s.Status, s.CorHTML
                 ORDER BY Total DESC
             `),
@@ -76,21 +137,27 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
         const propostasPorStatus = conv(propostasPorStatusRows as any[]);
         const atividadesHoje     = conv(atividadesHojeRows as any[])[0]?.Total ?? 0;
         const atividadesVencidas = conv(atividadesVencidasRows as any[])[0]?.Total ?? 0;
+        const valorTotal = propostasPorStatus.reduce((acc: number, s: any) => acc + Number(s.Valor || 0), 0);
 
-        return { totalPropostas, totalContatos, propostasPorStatus, atividadesHoje, atividadesVencidas };
+        return { totalPropostas, totalContatos, propostasPorStatus, atividadesHoje, atividadesVencidas, valorTotal };
     }, {
+        query: t.Object(filterQuerySchema),
         detail: {
             summary: "Obter visão geral do dashboard",
-            description: "Retorna indicadores gerais: total de propostas, total de contatos ativos (exclui contatos com status de Lixeira/Excluído/Deletado), propostas agrupadas por status com valor somado, atividades com follow-up para hoje e atividades vencidas. Se o usuário autenticado não for admin, os dados são restritos às propostas/contatos/atividades do próprio representante.",
+            description: "Retorna indicadores gerais: total de propostas, total de contatos ativos, propostas agrupadas por status com valor somado, atividades de hoje e vencidas. Aceita filtros opcionais dataInicio/dataFim (YYYY-MM-DD, sobre dtaCriacao da proposta), idStatus (lista separada por vírgula) e idRepresentante (lista separada por vírgula, apenas para admins — não-admins são sempre restritos ao próprio representante).",
         },
     })
 
     // ── GET /dashboard-stats/propostas-por-mes ────────────────────────────────
-    .get("/propostas-por-mes", async ({ request }) => {
-        const { userId, isAdmin } = getUserContext(request);
-        const repJoin = !isAdmin && userId > 0
-            ? `JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato AND c.idRepresentante = ${userId}`
-            : "";
+    .get("/propostas-por-mes", async ({ request, query }) => {
+        const filters = readFilters(request, query as Record<string, string | undefined>);
+        const repJoin = propostaJoinContato(filters);
+        const statusCond = filters.idStatus ? `AND p.idStatus IN (${filters.idStatus.join(",")})` : "";
+
+        const periodoCond = filters.dataInicio && filters.dataFim
+            ? `p.dtaCriacao >= '${filters.dataInicio}' AND p.dtaCriacao < DATEADD(DAY, 1, '${filters.dataFim}')`
+            : `p.dtaCriacao >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))`;
+
         const rows: any[] = await prisma.$queryRawUnsafe(`
             SELECT
                 Ano   = YEAR(p.dtaCriacao),
@@ -99,24 +166,25 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
                 Valor = SUM(ISNULL(p.TotalValor, 0))
             FROM CRM_Proposta p WITH (NOLOCK)
             ${repJoin}
-            WHERE p.dtaCriacao >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+            WHERE ${periodoCond} ${statusCond}
             GROUP BY YEAR(p.dtaCriacao), MONTH(p.dtaCriacao)
             ORDER BY Ano, Mes
         `);
         return conv(rows);
     }, {
+        query: t.Object(filterQuerySchema),
         detail: {
             summary: "Obter propostas agrupadas por mês",
-            description: "Retorna a quantidade e o valor total de propostas criadas em cada um dos últimos 12 meses (mês atual incluído), agrupados por ano e mês. Se o usuário autenticado não for admin, restringe o resultado às propostas dos contatos do próprio representante.",
+            description: "Retorna a quantidade e o valor total de propostas por mês. Sem dataInicio/dataFim, usa os últimos 12 meses (padrão). Aceita os mesmos filtros de idStatus e idRepresentante do overview.",
         },
     })
 
     // ── GET /dashboard-stats/representantes ───────────────────────────────────
-    .get("/representantes", async ({ request }) => {
-        const { userId, isAdmin } = getUserContext(request);
-        const repWhere = !isAdmin && userId > 0
-            ? `WHERE c.idRepresentante = ${userId}`
-            : "";
+    .get("/representantes", async ({ request, query }) => {
+        const filters = readFilters(request, query as Record<string, string | undefined>);
+        const repCond = filters.representantes ? `AND c.idRepresentante IN (${filters.representantes.join(",")})` : "";
+        const propWhere = propostaWhere(filters, "p");
+
         const rows: any[] = await prisma.$queryRawUnsafe(`
             SELECT TOP 10
                 u.idUsuario,
@@ -126,15 +194,39 @@ export const dashboardStatsRoutes = new Elysia({ detail: { tags: ["Dashboard"] }
             FROM CRM_Proposta p WITH (NOLOCK)
             JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato
             JOIN CRM_Usuario u WITH (NOLOCK) ON c.idRepresentante = u.idUsuario
-            ${repWhere}
+            WHERE 1=1 ${repCond} ${propWhere}
             GROUP BY u.idUsuario, u.Nome
             ORDER BY SUM(ISNULL(p.TotalValor, 0)) DESC
         `);
         return conv(rows);
     }, {
+        query: t.Object(filterQuerySchema),
         detail: {
             summary: "Ranking de representantes por valor de propostas",
-            description: "Retorna o top 10 representantes com maior valor total de propostas, com a quantidade de propostas e o valor somado, ordenados do maior para o menor valor. Se o usuário autenticado não for admin, o resultado é restrito ao próprio representante.",
+            description: "Retorna o top 10 representantes com maior valor total de propostas. Aceita os mesmos filtros de período, status e representante do overview.",
+        },
+    })
+
+    // ── GET /dashboard-stats/filter-options ───────────────────────────────────
+    .get("/filter-options", async ({ request }) => {
+        const { isAdmin } = getUserContext(request);
+        const [representantes, statuses] = await Promise.all([
+            isAdmin
+                ? prisma.$queryRawUnsafe(`
+                    SELECT DISTINCT u.idUsuario as id, UPPER(u.Nome) as nome
+                    FROM CRM_Proposta p WITH (NOLOCK)
+                    JOIN CRM_Contato c WITH (NOLOCK) ON p.idContato = c.idContato
+                    JOIN CRM_Usuario u WITH (NOLOCK) ON c.idRepresentante = u.idUsuario
+                    ORDER BY nome
+                `)
+                : Promise.resolve([]),
+            prisma.$queryRawUnsafe(`SELECT idStatus, Status, CorHTML FROM CRM_Proposta_Status WITH (NOLOCK) ORDER BY Status`),
+        ]);
+        return { representantes: conv(representantes as any[]), statuses: conv(statuses as any[]) };
+    }, {
+        detail: {
+            summary: "Listar opções de filtro do dashboard",
+            description: "Retorna as listas de representantes (apenas para admins) e status de proposta para popular os seletores de filtro do dashboard administrativo.",
         },
     })
 

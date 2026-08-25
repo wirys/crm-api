@@ -35,6 +35,7 @@ import { followupRoutes } from "./routes/followup";
 import { perfisRoutes } from "./routes/perfis";
 import { fiscalRoutes } from "./routes/fiscal";
 import { publicProposalsRoutes } from "./routes/public-proposals";
+import { changelogRoutes } from "./routes/changelog";
 import { actionLogger } from "./lib/action-logger";
 import { registerJobs } from "./jobs/registry";
 
@@ -73,6 +74,7 @@ export const app = new Elysia()
     .use(rastreamentoRoutes)
     .use(agendaRoutes)
     .use(dashboardStatsRoutes)
+    .use(changelogRoutes)
     .use(lixeiraRoutes)
     .use(perfilRoutes)
     .use(tabelaPrecoRoutes)
