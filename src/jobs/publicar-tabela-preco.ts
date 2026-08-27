@@ -162,7 +162,9 @@ export async function parseStagingTabelaPreco(idTabelaPreco: number) {
     const composicoesParaPublicar: ComposicaoStaging[] = rows
         .filter(r => r.tag === "COMPOSICAO" && /CJ|PRECO/i.test(col(r, 2)))
         .map(r => {
-            const nome = col(r, 2);
+            // Normaliza espaçamento (ex: "CJ 26,6 kg" vs "CJ 26,6kg") para não criar uma
+            // composição nova a cada importação por diferenças triviais de digitação na planilha.
+            const nome = col(r, 2).replace(/\s+/g, " ").trim().replace(/ kg\b/gi, "kg");
             const idxCJ = nome.toUpperCase().indexOf("CJ");
             const idxPreco = nome.toUpperCase().indexOf("PRECO");
             const p1 = idxCJ >= 0 ? idxCJ : idxPreco;

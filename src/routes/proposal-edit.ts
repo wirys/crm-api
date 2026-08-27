@@ -1,5 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../lib/prisma";
+import { parseStagingTabelaPreco } from "../jobs/publicar-tabela-preco";
+
+const normalizeCompName = (nome: string) => nome.replace(/\s+/g, " ").trim().replace(/ kg\b/gi, "kg");
 
 function convertBigIntToNumber(obj: any): any {
     if (obj === null || obj === undefined) return obj;
@@ -241,124 +244,99 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         },
     })
     .get("/products", async () => {
-        const results: any[] = await prisma.$queryRawUnsafe(`
-            WITH Base AS (
-                SELECT
-                    t1.idMaterial,
-                    t1.nomMaterial,
-                    t1.CodMaterial AS Codigo,
-                    t1.idMaterialGrupo,
-                    t2.nomGrupo AS Grupo,
-                    flaComposicao = ISNULL(t1.flaComposicao, 0),
-                    cm.idComposicao,
-                    c.nomComposicao,
-                    rn = ROW_NUMBER() OVER (PARTITION BY cm.idComposicao ORDER BY cm.id),
-                    compCanonica = CASE WHEN c.idComposicao IS NULL THEN 1 ELSE
-                        ROW_NUMBER() OVER (PARTITION BY c.nomComposicao ORDER BY c.idComposicao DESC) END
-                FROM CRM_Produto_Material AS t1
-                LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
-                LEFT OUTER JOIN CRM_Produto_ComposicaoMaterial AS cm ON cm.idMaterial = t1.idMaterial
-                LEFT OUTER JOIN CRM_Produto_Composicao AS c ON c.idComposicao = cm.idComposicao
-                WHERE t1.flaAtivo = 1
+        const rows: any[] = await prisma.$queryRawUnsafe(`
+            WITH NormalizedComp AS (
+                SELECT idComposicao, nomComposicao,
+                    NormName = REPLACE(LTRIM(RTRIM(nomComposicao)), ' kg', 'kg')
+                FROM CRM_Produto_Composicao
             ),
-            Canonico AS (
-                SELECT *, rnMaterial = ROW_NUMBER() OVER (PARTITION BY idMaterial ORDER BY idComposicao)
-                FROM Base
-                WHERE idComposicao IS NULL OR (rn = 1 AND compCanonica = 1)
+            RankedComp AS (
+                SELECT idComposicao, nomComposicao,
+                    rn = ROW_NUMBER() OVER (PARTITION BY NormName ORDER BY idComposicao DESC)
+                FROM NormalizedComp
+            ),
+            CanonicalComp AS (
+                SELECT nomComposicao, idComposicao
+                FROM RankedComp
+                WHERE rn = 1
             )
             SELECT
-                idMaterial,
-                Descricao = ISNULL(nomComposicao, nomMaterial),
-                Codigo,
-                idMaterialGrupo,
-                Grupo,
-                flaComposicao
-            FROM Canonico
-            WHERE rnMaterial = 1
-            ORDER BY Grupo, Descricao
-        `);
-        return convertBigIntToNumber(results);
-    }, {
-        detail: {
-            summary: "Listar materiais ativos",
-            description: "Retorna os materiais do catálogo (CRM_Produto_Material) com flaAtivo = 1, agrupados e ordenados por grupo de material, para uso em seletores de produtos. Materiais que pertencem a uma composição bi/tri componente (BASE, END, AGRE etc.) são colapsados em uma única linha por composição, exibindo o nome do conjunto (CRM_Produto_Composicao.nomComposicao) em vez de cada material individual.",
-        },
-    })
-    .get("/products/search", async ({ query }) => {
-        const q = query.q || "";
-        if (!q) return [];
-        const like = `%${q.replace(/[[%_\]]/g, c => `[${c}]`)}%`;
-        const results: any[] = await prisma.$queryRaw`
-            WITH Base AS (
-                SELECT
-                    t1.idMaterial,
-                    t1.nomMaterial,
-                    t1.CodMaterial AS Codigo,
-                    t1.idMaterialGrupo,
-                    t2.nomGrupo AS Grupo,
-                    flaComposicao = ISNULL(t1.flaComposicao, 0),
-                    cm.idComposicao,
-                    c.nomComposicao,
-                    rn = ROW_NUMBER() OVER (PARTITION BY cm.idComposicao ORDER BY cm.id),
-                    compCanonica = CASE WHEN c.idComposicao IS NULL THEN 1 ELSE
-                        ROW_NUMBER() OVER (PARTITION BY c.nomComposicao ORDER BY c.idComposicao DESC) END
-                FROM CRM_Produto_Material AS t1
-                LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
-                LEFT OUTER JOIN CRM_Produto_ComposicaoMaterial AS cm ON cm.idMaterial = t1.idMaterial
-                LEFT OUTER JOIN CRM_Produto_Composicao AS c ON c.idComposicao = cm.idComposicao
-                WHERE t1.flaAtivo = 1
-                    AND (t1.nomMaterial LIKE ${like} OR t1.CodMaterial LIKE ${like} OR c.nomComposicao LIKE ${like})
-            ),
-            Canonico AS (
-                SELECT *, rnMaterial = ROW_NUMBER() OVER (PARTITION BY idMaterial ORDER BY idComposicao)
-                FROM Base
-                WHERE idComposicao IS NULL OR (rn = 1 AND compCanonica = 1)
-            )
-            SELECT TOP 50
-                idMaterial,
-                Descricao = ISNULL(nomComposicao, nomMaterial),
-                Codigo,
-                idMaterialGrupo,
-                Grupo,
-                flaComposicao
-            FROM Canonico
-            WHERE rnMaterial = 1
-            ORDER BY Descricao
-        `;
-        return convertBigIntToNumber(results);
-    }, {
-        detail: {
-            summary: "Buscar materiais por texto",
-            description: "Pesquisa até 50 materiais ativos cujo nome ou código contenham o termo informado no parâmetro de query `q`. Retorna lista vazia se `q` não for informado.",
-        },
-    })
-    .get("/products/:idMaterial/composicao", async ({ params }) => {
-        const idMaterial = Number(params.idMaterial);
-        const results: any[] = await prisma.$queryRawUnsafe(`
+                Tipo = 'composicao',
+                NomComposicao = cc.nomComposicao,
+                IdComposicao = cc.idComposicao,
+                OrdemItem = cm.id,
+                m.idMaterial, m.nomMaterial, m.CodMaterial AS Codigo, m.NCM, m.Unidade, m.ST, m.IPI,
+                m.PrecoKg07, m.PrecoKg12, m.PrecoKg18, m.Embalagem, m.Consumo, m.PesoEmbalagem
+            FROM CanonicalComp cc
+            JOIN CRM_Produto_ComposicaoMaterial cm ON cm.idComposicao = cc.idComposicao
+            JOIN CRM_Produto_Material m ON m.idMaterial = cm.idMaterial AND m.flaAtivo = 1
+
+            UNION ALL
+
             SELECT
-                m.idMaterial,
-                m.nomMaterial,
-                m.CodMaterial AS Codigo
-            FROM CRM_Produto_ComposicaoMaterial cm
-            JOIN CRM_Produto_Material m ON cm.idMaterial = m.idMaterial
-            WHERE cm.idComposicao = (
-                SELECT TOP 1 cm2.idComposicao
-                FROM CRM_Produto_ComposicaoMaterial cm2
-                JOIN CRM_Produto_Composicao c2 ON c2.idComposicao = cm2.idComposicao
-                WHERE cm2.idMaterial = ${idMaterial}
-                ORDER BY
-                    CASE WHEN cm2.idComposicao = (
-                        SELECT MAX(c3.idComposicao) FROM CRM_Produto_Composicao c3 WHERE c3.nomComposicao = c2.nomComposicao
-                    ) THEN 0 ELSE 1 END,
-                    cm2.idComposicao DESC
-            )
-            AND cm.idMaterial <> ${idMaterial}
+                Tipo = 'avulso',
+                NomComposicao = NULL,
+                IdComposicao = NULL,
+                OrdemItem = NULL,
+                m.idMaterial, m.nomMaterial, m.CodMaterial AS Codigo, m.NCM, m.Unidade, m.ST, m.IPI,
+                m.PrecoKg07, m.PrecoKg12, m.PrecoKg18, m.Embalagem, m.Consumo, m.PesoEmbalagem
+            FROM CRM_Produto_Material m
+            WHERE m.flaAtivo = 1
+                AND NOT EXISTS (SELECT 1 FROM CRM_Produto_ComposicaoMaterial cm WHERE cm.idMaterial = m.idMaterial)
+
+            ORDER BY Tipo DESC, NomComposicao, OrdemItem, nomMaterial
         `);
-        return convertBigIntToNumber(results);
+        let converted = convertBigIntToNumber(rows) as any[];
+
+        // A tabela de preço mais recentemente publicada é a fonte da verdade para novas
+        // vendas: itens descontinuados (ausentes dela) somem do catálogo, mas continuam
+        // existindo no banco para não quebrar propostas antigas que já os referenciam.
+        const ultimaPublicada: any[] = await prisma.$queryRawUnsafe(`
+            SELECT TOP 1 id FROM tbTabelaPreco
+            WHERE Status = 'Tabela Publicada'
+            ORDER BY dtaCriacao DESC, id DESC
+        `);
+        const idTabelaPreco = ultimaPublicada[0]?.id ? Number(ultimaPublicada[0].id) : null;
+
+        if (idTabelaPreco) {
+            try {
+                const { produtos, composicoesParaPublicar } = await parseStagingTabelaPreco(idTabelaPreco);
+                const codigosVigentes = new Set(produtos.map(p => p.CodMaterial.trim()));
+                const composicoesVigentes = new Set(composicoesParaPublicar.map(c => normalizeCompName(c.nomComposicao)));
+                converted = converted.filter(r =>
+                    r.Tipo === "composicao"
+                        ? composicoesVigentes.has(normalizeCompName(r.NomComposicao))
+                        : codigosVigentes.has(String(r.Codigo ?? "").trim())
+                );
+            } catch {
+                // Sem staging disponível para a última publicação — mantém catálogo sem filtro
+                // ao invés de quebrar/esvaziar a listagem.
+            }
+        }
+
+        // idComposicao vai junto com cada grupo para que o frontend possa buscar a
+        // composição certa em /composition/:idMaterial?idComposicao=... sem depender de
+        // um "material representante" exclusivo (materiais podem ser compartilhados
+        // entre composições, ex: mesmo endurecedor usado em vários vernizes).
+        const composicoesMap = new Map<string, { idMaterial: number; idComposicao: number; nomComposicao: string; PesoEmbalagem: number | null; itens: any[] }>();
+        const avulsos: any[] = [];
+        for (const r of converted) {
+            const { Tipo, NomComposicao, IdComposicao, OrdemItem, ...item } = r;
+            if (Tipo === "composicao") {
+                if (!composicoesMap.has(NomComposicao)) {
+                    composicoesMap.set(NomComposicao, { idMaterial: item.idMaterial, idComposicao: IdComposicao, nomComposicao: NomComposicao, PesoEmbalagem: item.PesoEmbalagem, itens: [] });
+                }
+                composicoesMap.get(NomComposicao)!.itens.push(item);
+            } else {
+                avulsos.push(item);
+            }
+        }
+
+        return { composicoes: Array.from(composicoesMap.values()), avulsos };
     }, {
         detail: {
-            summary: "Listar materiais de uma composição",
-            description: "Dado um idMaterial, localiza a composição (CRM_Produto_ComposicaoMaterial) à qual ele pertence e retorna os demais materiais dessa mesma composição, excluindo o material informado.",
+            summary: "Listar materiais ativos agrupados por composição",
+            description: "Retorna os materiais do catálogo (CRM_Produto_Material com flaAtivo = 1) agrupados em `composicoes` (materiais que pertencem a uma composição bi/tri componente, usando sempre a versão mais recente de cada composição publicada) e `avulsos` (materiais sem composição), para uso no catálogo de produtos da proposta.",
         },
     })
     .get("/product-detail/:propostaNo/:idMaterial", async ({ params }) => {
@@ -704,16 +682,29 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         },
     })
     // ── GET composição de um material ────────────────────────────────────────────
-    .get("/composition/:idMaterial", async ({ params }) => {
+    .get("/composition/:idMaterial", async ({ params, query }) => {
         const idMaterial = Number(params.idMaterial);
+        const idComposicaoParam = query?.idComposicao ? Number(query.idComposicao) : null;
 
-        // Busca idComposicao vinculado a este material
-        const compLink: any[] = await prisma.$queryRawUnsafe(`
-            SELECT TOP 1 cm.idComposicao, c.nomComposicao, c.PesoEmbalagem, c.PrecoKg, c.ValorEmbalagem
-            FROM CRM_Produto_ComposicaoMaterial cm WITH (NOLOCK)
-            JOIN CRM_Produto_Composicao c WITH (NOLOCK) ON cm.idComposicao = c.idComposicao
-            WHERE cm.idMaterial = ${idMaterial}
-        `);
+        // Se o idComposicao vier explícito (fluxo normal, vindo do clique no catálogo),
+        // usa ele direto — evita ambiguidade quando o material é compartilhado entre
+        // várias composições (ex: mesmo endurecedor usado em vernizes diferentes).
+        // Sem idComposicao, cai no fallback antigo (TOP 1, pode ser ambíguo).
+        let compLink: any[];
+        if (idComposicaoParam) {
+            compLink = await prisma.$queryRawUnsafe(`
+                SELECT TOP 1 c.idComposicao, c.nomComposicao, c.PesoEmbalagem, c.PrecoKg, c.ValorEmbalagem
+                FROM CRM_Produto_Composicao c WITH (NOLOCK)
+                WHERE c.idComposicao = ${idComposicaoParam}
+            `);
+        } else {
+            compLink = await prisma.$queryRawUnsafe(`
+                SELECT TOP 1 cm.idComposicao, c.nomComposicao, c.PesoEmbalagem, c.PrecoKg, c.ValorEmbalagem
+                FROM CRM_Produto_ComposicaoMaterial cm WITH (NOLOCK)
+                JOIN CRM_Produto_Composicao c WITH (NOLOCK) ON cm.idComposicao = c.idComposicao
+                WHERE cm.idMaterial = ${idMaterial}
+            `);
+        }
 
         if (!compLink.length) return { hasComposition: false };
 
@@ -735,6 +726,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             materiais,
         });
     }, {
+        query: t.Object({ idComposicao: t.Optional(t.String()) }),
         detail: {
             summary: "Buscar composição de um material",
             description: "Verifica se o material informado pertence a uma composição (bicomponente, tricomponente etc.) e, em caso positivo, retorna todos os materiais que integram essa composição com seus dados de preço e peso.",
@@ -843,22 +835,28 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const propId = Number(params.id);
         const locked = await checkProposalLocked(propId, request);
         if (locked) { set.status = 403; return { error: locked }; }
-        // Verifica se o item é pai de composição (idMaterial=0, idComposicao>0)
+        // Todo material de uma composição (bi/tricomponente) é gravado com seu próprio
+        // idMaterial real, compartilhando idComposicao + idComposicaoDetalhe — não existe
+        // uma linha "pai" com idMaterial=0. Excluir um item do conjunto precisa apagar
+        // todas as linhas com o mesmo (idComposicao, idComposicaoDetalhe), senão sobra lixo.
         const row: any[] = await prisma.$queryRawUnsafe(
-            `SELECT idMaterial, idComposicao FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
+            `SELECT idComposicao, idComposicaoDetalhe FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`
         );
-        if (row.length && Number(row[0].idMaterial) === 0 && Number(row[0].idComposicao) > 0) {
-            // Apaga filhos primeiro
+        if (row.length && Number(row[0].idComposicao) > 0) {
             await prisma.$executeRawUnsafe(
-                `DELETE FROM CRM_Proposta_Detalhe WHERE idComposicaoDetalhe = ${Number(row[0].idComposicao)} AND idProposta = ${Number(params.id)}`
+                `DELETE FROM CRM_Proposta_Detalhe
+                 WHERE idComposicao = ${Number(row[0].idComposicao)}
+                   AND idComposicaoDetalhe = ${Number(row[0].idComposicaoDetalhe)}
+                   AND idProposta = ${propId}`
             );
+        } else {
+            await prisma.$executeRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
         }
-        await prisma.$executeRawUnsafe(`DELETE FROM CRM_Proposta_Detalhe WHERE idPropostaDetalhe = ${itemId}`);
         return { success: true };
     }, {
         detail: {
             summary: "Excluir item da proposta",
-            description: "Remove um item (idPropostaDetalhe) de CRM_Proposta_Detalhe. Se o item for pai de uma composição (idMaterial = 0 e idComposicao > 0), exclui primeiro os itens filhos dessa composição. Bloqueia a exclusão se a proposta estiver em checagem.",
+            description: "Remove um item (idPropostaDetalhe) de CRM_Proposta_Detalhe. Se o item pertencer a uma composição (idComposicao > 0), exclui todos os materiais do mesmo conjunto (idComposicao + idComposicaoDetalhe), não só o material clicado. Bloqueia a exclusão se a proposta estiver em checagem.",
         },
     })
     .get("/:id/detalhe", async ({ params }) => {
