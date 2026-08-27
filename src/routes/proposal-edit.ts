@@ -685,6 +685,7 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
     .get("/composition/:idMaterial", async ({ params, query }) => {
         const idMaterial = Number(params.idMaterial);
         const idComposicaoParam = query?.idComposicao ? Number(query.idComposicao) : null;
+        const propostaNo = query?.propostaNo || "";
 
         // Se o idComposicao vier explícito (fluxo normal, vindo do clique no catálogo),
         // usa ele direto — evita ambiguidade quando o material é compartilhado entre
@@ -711,22 +712,63 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const idComposicao = compLink[0].idComposicao;
 
         // Busca todos os materiais que compõem essa composição
-        const materiais: any[] = await prisma.$queryRawUnsafe(`
+        const materiaisRaw: any[] = await prisma.$queryRawUnsafe(`
             SELECT cm.idMaterial, m.nomMaterial, m.CodMaterial, m.PesoEmbalagem, m.PrecoKg, m.ValorEmbalagem, m.IPI
             FROM CRM_Produto_ComposicaoMaterial cm WITH (NOLOCK)
             JOIN CRM_Produto_Material m WITH (NOLOCK) ON cm.idMaterial = m.idMaterial
             WHERE cm.idComposicao = ${idComposicao}
             ORDER BY cm.id
         `);
+        let materiais = convertBigIntToNumber(materiaisRaw) as any[];
+
+        // O campo m.PrecoKg do catálogo não é mantido pela importação (só os tiers
+        // PrecoKg07/12/18 são); o preço real de cada material vem sempre de
+        // sp_CRMTabelaPrecoIndividual, no contexto da proposta. Sem isso, cada linha
+        // do conjunto aparece com preço zerado e o total mostrado é só o de 1 item.
+        if (propostaNo) {
+            const priceResults = await Promise.allSettled(
+                materiais.map((m: any) =>
+                    prisma.$queryRawUnsafe(
+                        `EXEC sp_CRMTabelaPrecoIndividual @PropostaNo = '${propostaNo}', @idMaterial = ${Number(m.idMaterial)}`
+                    ).then((r: any) => ({ idMaterial: Number(m.idMaterial), price: r[0] || null }))
+                )
+            );
+            const priceMap: Record<number, any> = {};
+            for (const res of priceResults) {
+                if (res.status === "fulfilled" && res.value.price) {
+                    priceMap[res.value.idMaterial] = convertBigIntToNumber(res.value.price);
+                }
+            }
+            materiais = materiais.map((m: any) => {
+                const p = priceMap[Number(m.idMaterial)];
+                if (!p) return m;
+                return {
+                    ...m,
+                    PesoEmbalagem: Number(p.PesoEmbalagem ?? m.PesoEmbalagem ?? 0),
+                    PrecoKg: Number(p.PrecoKg ?? m.PrecoKg ?? 0),
+                    ValorEmbalagem: Number(p.ValorEmbalagem ?? p.Valor ?? m.ValorEmbalagem ?? 0),
+                    IPI: Number(p.IPI ?? m.IPI ?? 0),
+                };
+            });
+        }
+
+        const totalPesoEmbalagem = materiais.reduce((s, m) => s + Number(m.PesoEmbalagem || 0), 0);
+        const totalValorEmbalagem = materiais.reduce((s, m) => s + Number(m.ValorEmbalagem || 0), 0);
+        const totalValorIPI = materiais.reduce((s, m) => s + Number(m.ValorEmbalagem || 0) * Number(m.IPI || 0) / 100, 0);
 
         return convertBigIntToNumber({
             hasComposition: true,
             idComposicao,
             nomComposicao: compLink[0].nomComposicao,
             materiais,
+            totalPesoEmbalagem,
+            totalPrecoKg: totalPesoEmbalagem > 0 ? totalValorEmbalagem / totalPesoEmbalagem : 0,
+            totalValorEmbalagem,
+            totalValorIPI,
+            totalValorEmbalagemIPI: totalValorEmbalagem + totalValorIPI,
         });
     }, {
-        query: t.Object({ idComposicao: t.Optional(t.String()) }),
+        query: t.Object({ idComposicao: t.Optional(t.String()), propostaNo: t.Optional(t.String()) }),
         detail: {
             summary: "Buscar composição de um material",
             description: "Verifica se o material informado pertence a uma composição (bicomponente, tricomponente etc.) e, em caso positivo, retorna todos os materiais que integram essa composição com seus dados de preço e peso.",
