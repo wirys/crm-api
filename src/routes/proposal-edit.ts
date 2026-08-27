@@ -242,42 +242,89 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
     })
     .get("/products", async () => {
         const results: any[] = await prisma.$queryRawUnsafe(`
+            WITH Base AS (
+                SELECT
+                    t1.idMaterial,
+                    t1.nomMaterial,
+                    t1.CodMaterial AS Codigo,
+                    t1.idMaterialGrupo,
+                    t2.nomGrupo AS Grupo,
+                    flaComposicao = ISNULL(t1.flaComposicao, 0),
+                    cm.idComposicao,
+                    c.nomComposicao,
+                    rn = ROW_NUMBER() OVER (PARTITION BY cm.idComposicao ORDER BY cm.id),
+                    compCanonica = CASE WHEN c.idComposicao IS NULL THEN 1 ELSE
+                        ROW_NUMBER() OVER (PARTITION BY c.nomComposicao ORDER BY c.idComposicao DESC) END
+                FROM CRM_Produto_Material AS t1
+                LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
+                LEFT OUTER JOIN CRM_Produto_ComposicaoMaterial AS cm ON cm.idMaterial = t1.idMaterial
+                LEFT OUTER JOIN CRM_Produto_Composicao AS c ON c.idComposicao = cm.idComposicao
+                WHERE t1.flaAtivo = 1
+            ),
+            Canonico AS (
+                SELECT *, rnMaterial = ROW_NUMBER() OVER (PARTITION BY idMaterial ORDER BY idComposicao)
+                FROM Base
+                WHERE idComposicao IS NULL OR (rn = 1 AND compCanonica = 1)
+            )
             SELECT
-                t1.idMaterial,
-                t1.nomMaterial AS Descricao,
-                t1.CodMaterial AS Codigo,
-                t1.idMaterialGrupo,
-                t2.nomGrupo AS Grupo,
-                flaComposicao = ISNULL(t1.flaComposicao, 0)
-            FROM CRM_Produto_Material AS t1
-            LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
-            WHERE t1.flaAtivo = 1
-            ORDER BY t2.nomGrupo, t1.nomMaterial
+                idMaterial,
+                Descricao = ISNULL(nomComposicao, nomMaterial),
+                Codigo,
+                idMaterialGrupo,
+                Grupo,
+                flaComposicao
+            FROM Canonico
+            WHERE rnMaterial = 1
+            ORDER BY Grupo, Descricao
         `);
         return convertBigIntToNumber(results);
     }, {
         detail: {
             summary: "Listar materiais ativos",
-            description: "Retorna todos os materiais do catálogo (CRM_Produto_Material) com flaAtivo = 1, agrupados e ordenados por grupo de material, para uso em seletores de produtos.",
+            description: "Retorna os materiais do catálogo (CRM_Produto_Material) com flaAtivo = 1, agrupados e ordenados por grupo de material, para uso em seletores de produtos. Materiais que pertencem a uma composição bi/tri componente (BASE, END, AGRE etc.) são colapsados em uma única linha por composição, exibindo o nome do conjunto (CRM_Produto_Composicao.nomComposicao) em vez de cada material individual.",
         },
     })
     .get("/products/search", async ({ query }) => {
         const q = query.q || "";
         if (!q) return [];
-        const results: any[] = await prisma.$queryRawUnsafe(`
+        const like = `%${q.replace(/[[%_\]]/g, c => `[${c}]`)}%`;
+        const results: any[] = await prisma.$queryRaw`
+            WITH Base AS (
+                SELECT
+                    t1.idMaterial,
+                    t1.nomMaterial,
+                    t1.CodMaterial AS Codigo,
+                    t1.idMaterialGrupo,
+                    t2.nomGrupo AS Grupo,
+                    flaComposicao = ISNULL(t1.flaComposicao, 0),
+                    cm.idComposicao,
+                    c.nomComposicao,
+                    rn = ROW_NUMBER() OVER (PARTITION BY cm.idComposicao ORDER BY cm.id),
+                    compCanonica = CASE WHEN c.idComposicao IS NULL THEN 1 ELSE
+                        ROW_NUMBER() OVER (PARTITION BY c.nomComposicao ORDER BY c.idComposicao DESC) END
+                FROM CRM_Produto_Material AS t1
+                LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
+                LEFT OUTER JOIN CRM_Produto_ComposicaoMaterial AS cm ON cm.idMaterial = t1.idMaterial
+                LEFT OUTER JOIN CRM_Produto_Composicao AS c ON c.idComposicao = cm.idComposicao
+                WHERE t1.flaAtivo = 1
+                    AND (t1.nomMaterial LIKE ${like} OR t1.CodMaterial LIKE ${like} OR c.nomComposicao LIKE ${like})
+            ),
+            Canonico AS (
+                SELECT *, rnMaterial = ROW_NUMBER() OVER (PARTITION BY idMaterial ORDER BY idComposicao)
+                FROM Base
+                WHERE idComposicao IS NULL OR (rn = 1 AND compCanonica = 1)
+            )
             SELECT TOP 50
-                t1.idMaterial,
-                t1.nomMaterial AS Descricao,
-                t1.CodMaterial AS Codigo,
-                t1.idMaterialGrupo,
-                t2.nomGrupo AS Grupo,
-                flaComposicao = ISNULL(t1.flaComposicao, 0)
-            FROM CRM_Produto_Material AS t1
-            LEFT OUTER JOIN CRM_Produto_MaterialGrupo AS t2 ON t1.idMaterialGrupo = t2.idMaterialGrupo
-            WHERE t1.flaAtivo = 1
-                AND (t1.nomMaterial LIKE '%${q}%' OR t1.CodMaterial LIKE '%${q}%')
-            ORDER BY t1.nomMaterial
-        `);
+                idMaterial,
+                Descricao = ISNULL(nomComposicao, nomMaterial),
+                Codigo,
+                idMaterialGrupo,
+                Grupo,
+                flaComposicao
+            FROM Canonico
+            WHERE rnMaterial = 1
+            ORDER BY Descricao
+        `;
         return convertBigIntToNumber(results);
     }, {
         detail: {
@@ -295,9 +342,15 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
             FROM CRM_Produto_ComposicaoMaterial cm
             JOIN CRM_Produto_Material m ON cm.idMaterial = m.idMaterial
             WHERE cm.idComposicao = (
-                SELECT TOP 1 idComposicao
-                FROM CRM_Produto_ComposicaoMaterial
-                WHERE idMaterial = ${idMaterial}
+                SELECT TOP 1 cm2.idComposicao
+                FROM CRM_Produto_ComposicaoMaterial cm2
+                JOIN CRM_Produto_Composicao c2 ON c2.idComposicao = cm2.idComposicao
+                WHERE cm2.idMaterial = ${idMaterial}
+                ORDER BY
+                    CASE WHEN cm2.idComposicao = (
+                        SELECT MAX(c3.idComposicao) FROM CRM_Produto_Composicao c3 WHERE c3.nomComposicao = c2.nomComposicao
+                    ) THEN 0 ELSE 1 END,
+                    cm2.idComposicao DESC
             )
             AND cm.idMaterial <> ${idMaterial}
         `);
