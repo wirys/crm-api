@@ -149,6 +149,8 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
         try {
             const { produtos, composicoesParaPublicar } = await parseStagingTabelaPreco(id);
 
+            const normNome = (nome: string) => nome.replace(/\s+/g, " ").trim().replace(/ kg\b/gi, "kg").toUpperCase();
+
             const composicoesPorImportacao = new Map<number, { nomComposicao: string; PesoEmbalagem: number | null }>();
             for (const c of composicoesParaPublicar) {
                 if (c.idComposicaoImportacao != null) {
@@ -156,16 +158,21 @@ export const tabelaPrecoRoutes = new Elysia({ detail: { tags: ["Tabela de Preco"
                 }
             }
 
-            const grupos = new Map<number, { nomComposicao: string; PesoEmbalagem: number | null; itens: typeof produtos }>();
+            // Agrupa por nome normalizado (não por idComposicaoImportacao) para que
+            // composições duplicadas na planilha de origem (mesma composição importada
+            // mais de uma vez, com pequenas variações de espaço/maiúscula) apareçam
+            // como um único grupo no preview.
+            const grupos = new Map<string, { nomComposicao: string; PesoEmbalagem: number | null; itens: typeof produtos }>();
             const avulsos: typeof produtos = [];
 
             for (const p of produtos) {
                 const comp = p.idComposicaoImportacao != null ? composicoesPorImportacao.get(p.idComposicaoImportacao) : undefined;
                 if (comp && p.idComposicaoImportacao != null) {
-                    if (!grupos.has(p.idComposicaoImportacao)) {
-                        grupos.set(p.idComposicaoImportacao, { ...comp, itens: [] });
+                    const key = normNome(comp.nomComposicao);
+                    if (!grupos.has(key)) {
+                        grupos.set(key, { ...comp, itens: [] });
                     }
-                    grupos.get(p.idComposicaoImportacao)!.itens.push(p);
+                    grupos.get(key)!.itens.push(p);
                 } else {
                     avulsos.push(p);
                 }

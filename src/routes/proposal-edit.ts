@@ -21,6 +21,8 @@ function convertBigIntToNumber(obj: any): any {
 }
 
 const CHECAGEM_GROUPS = new Set([1, 2, 3, 4, 5, 7]);
+// Coordenação ou superior — mesmo grupo usado em checagem.ts para "aprovar-cliente" (exclui grupo 4, Operacional)
+const COORDENACAO_GROUPS = new Set([1, 2, 3, 5, 7]);
 
 async function checkProposalLocked(id: number, request: Request): Promise<string | null> {
     const rows: any[] = await prisma.$queryRawUnsafe(
@@ -247,7 +249,9 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         const rows: any[] = await prisma.$queryRawUnsafe(`
             WITH NormalizedComp AS (
                 SELECT idComposicao, nomComposicao,
-                    NormName = REPLACE(LTRIM(RTRIM(nomComposicao)), ' kg', 'kg')
+                    NormName = UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                        LTRIM(RTRIM(nomComposicao)),
+                        '  ', ' '), '  ', ' '), '  ', ' '), '  ', ' '), ' KG', 'KG'))
                 FROM CRM_Produto_Composicao
             ),
             RankedComp AS (
@@ -323,10 +327,11 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         for (const r of converted) {
             const { Tipo, NomComposicao, IdComposicao, OrdemItem, ...item } = r;
             if (Tipo === "composicao") {
-                if (!composicoesMap.has(NomComposicao)) {
-                    composicoesMap.set(NomComposicao, { idMaterial: item.idMaterial, idComposicao: IdComposicao, nomComposicao: NomComposicao, PesoEmbalagem: item.PesoEmbalagem, itens: [] });
+                const key = normalizeCompName(NomComposicao).toUpperCase();
+                if (!composicoesMap.has(key)) {
+                    composicoesMap.set(key, { idMaterial: item.idMaterial, idComposicao: IdComposicao, nomComposicao: NomComposicao, PesoEmbalagem: item.PesoEmbalagem, itens: [] });
                 }
-                composicoesMap.get(NomComposicao)!.itens.push(item);
+                composicoesMap.get(key)!.itens.push(item);
             } else {
                 avulsos.push(item);
             }
@@ -659,7 +664,12 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         },
     })
     // ── POST /condicoes-pagamento  — cadastrar nova condição ──────────────────
-    .post("/condicoes-pagamento", async ({ body, set }) => {
+    .post("/condicoes-pagamento", async ({ body, request, set }) => {
+        const userGroup = Number(request.headers.get("x-user-group") || 0);
+        if (!COORDENACAO_GROUPS.has(userGroup)) {
+            set.status = 403;
+            return { error: "Apenas usuários de coordenação ou superior podem criar condições de pagamento." };
+        }
         const { Titulo } = body as any;
         const titulo = String(Titulo || '').trim().replace(/'/g, "''");
         if (!titulo) { set.status = 400; return { error: "Informe o título" }; }
@@ -679,6 +689,67 @@ export const proposalEditRoutes = new Elysia({ detail: { tags: ["Propostas"] }, 
         detail: {
             summary: "Criar condição de pagamento",
             description: "Cadastra uma nova condição de pagamento (CRM_Proposta_CondicaoPagamento) ativa, a partir do título informado no body.",
+        },
+    })
+    // ── PUT /condicoes-pagamento/:id  — editar condição (só coordenação+) ─────
+    .put("/condicoes-pagamento/:id", async ({ params, body, request, set }) => {
+        const userGroup = Number(request.headers.get("x-user-group") || 0);
+        if (!COORDENACAO_GROUPS.has(userGroup)) {
+            set.status = 403;
+            return { error: "Apenas usuários de coordenação ou superior podem editar condições de pagamento." };
+        }
+        const id = Number(params.id);
+        const { Titulo } = body as any;
+        const titulo = String(Titulo || '').trim().replace(/'/g, "''");
+        if (!id || !titulo) { set.status = 400; return { error: "Informe o título" }; }
+        try {
+            await prisma.$queryRawUnsafe(`
+                UPDATE CRM_Proposta_CondicaoPagamento
+                SET Titulo = '${titulo}', dtaAtualizacao = GETDATE()
+                WHERE idCondicaoPagamento = ${id}
+            `);
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao editar condição de pagamento" };
+        }
+    }, {
+        detail: {
+            summary: "Editar condição de pagamento",
+            description: "Atualiza o título de uma condição de pagamento existente. Restrito a usuários de coordenação ou superior.",
+        },
+    })
+    // ── DELETE /condicoes-pagamento/:id  — excluir condição (só coordenação+) ─
+    .delete("/condicoes-pagamento/:id", async ({ params, request, set }) => {
+        const userGroup = Number(request.headers.get("x-user-group") || 0);
+        if (!COORDENACAO_GROUPS.has(userGroup)) {
+            set.status = 403;
+            return { error: "Apenas usuários de coordenação ou superior podem excluir condições de pagamento." };
+        }
+        const id = Number(params.id);
+        if (!id) { set.status = 400; return { error: "ID inválido" }; }
+        try {
+            const usoProposta: any[] = await prisma.$queryRawUnsafe(
+                `SELECT TOP 1 idProposta FROM CRM_Proposta WHERE idCondicaoPagamento = ${id}`
+            );
+            if (usoProposta.length) {
+                set.status = 409;
+                return { error: "Esta condição de pagamento está em uso por propostas existentes e não pode ser excluída. Você pode inativá-la editando o título ou removendo-a apenas quando não estiver mais em uso." };
+            }
+            await prisma.$queryRawUnsafe(
+                `UPDATE CRM_Proposta_CondicaoPagamento SET flaAtivo = 0 WHERE idCondicaoPagamento = ${id}`
+            );
+            return { success: true };
+        } catch (e) {
+            console.error(e);
+            set.status = 500;
+            return { error: "Erro ao excluir condição de pagamento" };
+        }
+    }, {
+        detail: {
+            summary: "Excluir condição de pagamento",
+            description: "Inativa (soft delete) uma condição de pagamento, desde que não esteja em uso por nenhuma proposta. Restrito a usuários de coordenação ou superior.",
         },
     })
     // ── GET composição de um material ────────────────────────────────────────────

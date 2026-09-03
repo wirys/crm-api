@@ -597,6 +597,18 @@ model CRM_EmailConfig {
   dtaAlteracao DateTime? @db.DateTime
 }
 
+model CRM_ApiKey {
+  id           Int       @id(map: "PK_CRM_ApiKey") @default(autoincrement())
+  Nome         String    @db.VarChar(100)
+  ChaveHash    String    @db.VarChar(64)
+  ChavePrefixo String    @db.VarChar(12)
+  flaAtivo     Boolean   @default(true)
+  dtaCriacao   DateTime  @default(now()) @db.DateTime
+  dtaUltimoUso DateTime? @db.DateTime
+
+  @@index([ChaveHash], map: "IX_CRM_ApiKey_ChaveHash")
+}
+
 model CRM_PedidosAbertos_ItemExtra {
   id                 Int       @id(map: "PK_CRM_PedidosAbertos_ItemExtra") @default(autoincrement())
   idPropostaDetalhe  Int?
